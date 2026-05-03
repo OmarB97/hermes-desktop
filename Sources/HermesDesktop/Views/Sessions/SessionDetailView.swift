@@ -22,8 +22,10 @@ private enum SessionScrollReason {
             return .milliseconds(120)
         case .messagesLoaded:
             return .milliseconds(60)
-        case .pendingTurnChanged, .messagesChangedWhilePending:
+        case .pendingTurnChanged:
             return .milliseconds(40)
+        case .messagesChangedWhilePending:
+            return .milliseconds(80)
         }
     }
 
@@ -33,8 +35,10 @@ private enum SessionScrollReason {
             return .milliseconds(360)
         case .messagesLoaded:
             return .milliseconds(220)
-        case .pendingTurnChanged, .messagesChangedWhilePending:
+        case .pendingTurnChanged:
             return .milliseconds(140)
+        case .messagesChangedWhilePending:
+            return nil
         }
     }
 
@@ -42,8 +46,10 @@ private enum SessionScrollReason {
         switch self {
         case .sessionChanged, .messagesLoaded:
             return false
-        case .pendingTurnChanged, .messagesChangedWhilePending:
+        case .pendingTurnChanged:
             return true
+        case .messagesChangedWhilePending:
+            return false
         }
     }
 }
@@ -62,15 +68,15 @@ private struct SessionScrollRequest: Equatable {
 }
 
 struct SessionDetailView: View {
-    @EnvironmentObject private var appState: AppState
-
     let session: SessionSummary?
     let messages: [SessionMessageDisplay]
     let errorMessage: String?
     let conversationError: String?
     let isSendingMessage: Bool
+    let isDeletingSession: Bool
     let pendingTurn: PendingSessionTurn?
     let onResumeInTerminal: (SessionSummary) -> Void
+    let onDeleteSession: (SessionSummary) async -> Void
     let onStartSession: (String, Bool) async -> Bool
     let onSendMessage: (String, Bool) async -> Bool
 
@@ -121,7 +127,7 @@ struct SessionDetailView: View {
         .alert("Delete this session?", isPresented: $showDeleteConfirmation, presenting: session) { session in
             Button("Delete", role: .destructive) {
                 Task {
-                    await appState.deleteSession(session)
+                    await onDeleteSession(session)
                 }
             }
             Button("Cancel", role: .cancel) {}
@@ -138,7 +144,7 @@ struct SessionDetailView: View {
         if let session {
             SessionSummaryPanel(
                 session: session,
-                isDeleting: appState.isDeletingSession && appState.selectedSessionID == session.id,
+                isDeleting: isDeletingSession,
                 onDelete: { showDeleteConfirmation = true }
             )
 
@@ -190,6 +196,7 @@ struct SessionDetailView: View {
                 LazyVStack(alignment: .leading, spacing: 12) {
                     ForEach(messages) { message in
                         MessageCard(message: message)
+                            .equatable()
                             .id(sessionMessageScrollID(message))
                     }
 
@@ -684,7 +691,7 @@ private struct PendingBubble: View {
     }
 }
 
-private struct MessageCard: View {
+private struct MessageCard: View, Equatable {
     let message: SessionMessageDisplay
 
     var body: some View {
@@ -693,6 +700,10 @@ private struct MessageCard: View {
         } else {
             ConversationMessageCard(message: message)
         }
+    }
+
+    nonisolated static func == (lhs: MessageCard, rhs: MessageCard) -> Bool {
+        lhs.message == rhs.message
     }
 }
 

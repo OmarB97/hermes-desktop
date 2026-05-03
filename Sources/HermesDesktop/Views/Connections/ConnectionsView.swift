@@ -73,6 +73,12 @@ struct ConnectionsView: View {
             }
             .id(editorPresentationID)
         }
+        .onAppear {
+            presentPendingNewConnectionEditorIfNeeded()
+        }
+        .onChange(of: appState.pendingNewConnectionEditorRequestID) { _, _ in
+            presentPendingNewConnectionEditorIfNeeded()
+        }
     }
 
     private var hostsPanel: some View {
@@ -146,6 +152,12 @@ struct ConnectionsView: View {
         editingExistingConnection = isEditing
         editorPresentationID = UUID()
         isPresentingEditor = true
+    }
+
+    private func presentPendingNewConnectionEditorIfNeeded() {
+        guard let requestID = appState.pendingNewConnectionEditorRequestID else { return }
+        presentEditor(for: ConnectionProfile(), isEditing: false)
+        appState.consumeNewConnectionEditorRequest(requestID)
     }
 }
 

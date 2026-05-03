@@ -92,6 +92,10 @@ struct ConnectionEditorSheet: View {
                                     .focused($focusedField, equals: .hermesProfile)
                                     .textFieldStyle(.roundedBorder)
                             }
+
+                            if let validationMessage {
+                                HermesValidationMessage(text: validationMessage)
+                            }
                         }
                     }
 
@@ -194,15 +198,32 @@ struct ConnectionEditorSheet: View {
     private var parsedPort: Int? {
         let trimmed = portText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
-        guard let value = Int(trimmed), value > 0 else { return nil }
+        guard let value = Int(trimmed), (1...65_535).contains(value) else { return nil }
         return value
     }
 
     private var isDraftValid: Bool {
+        validationMessage == nil
+    }
+
+    private var validationMessage: String? {
         let hasValidPort = portText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || parsedPort != nil
         var candidate = draft
         candidate.sshPort = parsedPort
-        return hasValidPort && candidate.isValid
+
+        if candidate.label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Name is required."
+        }
+
+        if candidate.trimmedAlias == nil && candidate.trimmedHost == nil {
+            return "Add an SSH alias or host."
+        }
+
+        if !hasValidPort {
+            return "Enter a valid SSH port from 1 to 65535."
+        }
+
+        return candidate.isValid ? nil : "Check the connection details before saving."
     }
 
     private var hermesProfileBinding: Binding<String> {

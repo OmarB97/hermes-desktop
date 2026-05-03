@@ -110,7 +110,7 @@ struct OverviewView: View {
     }
 
     private func currentHostPanel(_ activeConnection: ConnectionProfile) -> some View {
-        OverviewPanel(
+        HermesSurfacePanel(
             title: "Current Host",
             subtitle: "The active SSH connection for this workspace."
         ) {
@@ -126,20 +126,20 @@ struct OverviewView: View {
                         .textSelection(.enabled)
                 }
 
-                OverviewDetailBlock(
+                HermesLabeledValue(
                     label: "Connection",
                     value: "SSH",
                     emphasizeValue: true
                 )
 
                 if let alias = activeConnection.trimmedAlias {
-                    OverviewDetailBlock(
+                    HermesLabeledValue(
                         label: "Alias",
                         value: alias,
                         isMonospaced: true
                     )
                 } else if let host = activeConnection.trimmedHost {
-                    OverviewDetailBlock(
+                    HermesLabeledValue(
                         label: "Host",
                         value: host,
                         isMonospaced: true
@@ -147,7 +147,7 @@ struct OverviewView: View {
                 }
 
                 if let lastConnectedAt = activeConnection.lastConnectedAt {
-                    OverviewDetailBlock(
+                    HermesLabeledValue(
                         label: "Last connected",
                         value: DateFormatters.relativeFormatter().localizedString(for: lastConnectedAt, relativeTo: .now)
                     )
@@ -157,24 +157,24 @@ struct OverviewView: View {
     }
 
     private func workspacePanel(_ overview: RemoteDiscovery) -> some View {
-        OverviewPanel(
+        HermesSurfacePanel(
             title: "Workspace",
             subtitle: "The active Hermes profile and the folders it resolves to on the current host."
         ) {
             VStack(alignment: .leading, spacing: 14) {
-                OverviewDetailBlock(
+                HermesLabeledValue(
                     label: "Active profile",
                     value: overview.activeProfile.name,
                     emphasizeValue: true
                 )
 
-                OverviewDetailBlock(
+                HermesLabeledValue(
                     label: "Home folder",
                     value: overview.remoteHome,
                     isMonospaced: true
                 )
 
-                OverviewDetailBlock(
+                HermesLabeledValue(
                     label: "Hermes home",
                     value: overview.hermesHome,
                     isMonospaced: true,
@@ -189,7 +189,7 @@ struct OverviewView: View {
 
                         HStack(spacing: 8) {
                             ForEach(overview.availableProfiles) { profile in
-                                OverviewBadge(
+                                HermesBadge(
                                     text: profile.name,
                                     tint: profile.name == overview.activeProfile.name ? .accentColor : .secondary
                                 )
@@ -209,13 +209,13 @@ struct OverviewView: View {
             ? "All \(statusItems.count) checks passed"
             : "\(readyCount) of \(statusItems.count) checks passed"
 
-        return OverviewPanel(
+        return HermesSurfacePanel(
             title: "Status",
             subtitle: "Quick checks to confirm the active host is ready for files, sessions, usage, and terminal access."
         ) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .center, spacing: 12) {
-                    OverviewBadge(
+                    HermesBadge(
                         text: summaryTitle,
                         tint: readyCount == statusItems.count ? .green : .orange
                     )
@@ -235,7 +235,7 @@ struct OverviewView: View {
     }
 
     private func workspaceFilesPanel(_ overview: RemoteDiscovery) -> some View {
-        OverviewPanel(
+        HermesSurfacePanel(
             title: "Workspace Files",
             subtitle: "Expected Hermes files and folders on the active host."
         ) {
@@ -286,7 +286,7 @@ struct OverviewView: View {
     }
 
     private func sessionHistoryPanel(_ overview: RemoteDiscovery) -> some View {
-        OverviewPanel(
+        HermesSurfacePanel(
             title: "Session History",
             subtitle: "The source Hermes uses for Sessions and Usage on the active host."
         ) {
@@ -309,11 +309,11 @@ struct OverviewView: View {
 
                         Spacer(minLength: 12)
 
-                        OverviewBadge(text: sessionStore.kind.displayName, tint: .accentColor)
+                        HermesBadge(text: sessionStore.kind.displayName, tint: .accentColor)
                     }
 
                     VStack(alignment: .leading, spacing: 14) {
-                        OverviewDetailBlock(
+                        HermesLabeledValue(
                             label: "Database path",
                             value: sessionStore.path,
                             isMonospaced: true,
@@ -321,7 +321,7 @@ struct OverviewView: View {
                         )
 
                         if let sessionTable = sessionStore.sessionTable {
-                            OverviewDetailBlock(
+                            HermesLabeledValue(
                                 label: "Sessions table",
                                 value: sessionTable,
                                 isMonospaced: true
@@ -329,7 +329,7 @@ struct OverviewView: View {
                         }
 
                         if let messageTable = sessionStore.messageTable {
-                            OverviewDetailBlock(
+                            HermesLabeledValue(
                                 label: "Messages table",
                                 value: messageTable,
                                 isMonospaced: true
@@ -354,10 +354,10 @@ struct OverviewView: View {
 
                         Spacer(minLength: 12)
 
-                        OverviewBadge(text: "JSONL", tint: .secondary)
+                        HermesBadge(text: "JSONL", tint: .secondary)
                     }
 
-                    OverviewDetailBlock(
+                    HermesLabeledValue(
                         label: "Transcript folder",
                         value: overview.paths.sessionsDir,
                         isMonospaced: true,
@@ -369,7 +369,7 @@ struct OverviewView: View {
     }
 
     private func kanbanPanel(_ overview: RemoteDiscovery) -> some View {
-        OverviewPanel(
+        HermesSurfacePanel(
             title: "Kanban Board",
             subtitle: "Host-wide coordination state shared by Hermes profiles on this SSH target."
         ) {
@@ -391,10 +391,10 @@ struct OverviewView: View {
 
                     Spacer(minLength: 12)
 
-                    OverviewBadge(text: "Host-wide", tint: .accentColor)
+                    HermesBadge(text: "Host-wide", tint: .accentColor)
                 }
 
-                OverviewDetailBlock(
+                HermesLabeledValue(
                     label: "Database path",
                     value: overview.kanban?.databasePath ?? overview.paths.kanbanDatabase ?? "~/.hermes/kanban.db",
                     isMonospaced: true,
@@ -402,19 +402,19 @@ struct OverviewView: View {
                 )
 
                 HStack(spacing: 10) {
-                    OverviewBadge(
+                    HermesBadge(
                         text: overview.kanban?.hasHermesCLI == true ? "CLI ready" : "CLI missing",
                         tint: overview.kanban?.hasHermesCLI == true ? .green : .orange
                     )
 
-                    OverviewBadge(
+                    HermesBadge(
                         text: overview.kanban?.hasKanbanModule == true ? "Module ready" : "Module fallback",
                         tint: overview.kanban?.hasKanbanModule == true ? .green : .secondary
                     )
 
                     if let dispatcher = overview.kanban?.dispatcher,
                        let running = dispatcher.running {
-                        OverviewBadge(
+                        HermesBadge(
                             text: running ? "Dispatcher active" : "Dispatcher inactive",
                             tint: running ? .green : .orange
                         )
@@ -459,77 +459,6 @@ struct OverviewView: View {
     }
 }
 
-private struct OverviewPanel<Content: View>: View {
-    let title: String
-    let subtitle: String
-    @ViewBuilder let content: Content
-
-    init(
-        title: String,
-        subtitle: String,
-        @ViewBuilder content: () -> Content
-    ) {
-        self.title = title
-        self.subtitle = subtitle
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(L10n.string(title))
-                    .font(.headline)
-
-                Text(L10n.string(subtitle))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            content
-        }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color(NSColor.controlBackgroundColor))
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.07), lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
-    }
-}
-
-private struct OverviewDetailBlock: View {
-    let label: String
-    let value: String
-    var isMonospaced = false
-    var emphasizeValue = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(L10n.string(label))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Text(value)
-                .font(valueFont)
-                .foregroundStyle(emphasizeValue ? .primary : .secondary)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    private var valueFont: Font {
-        if isMonospaced {
-            return .system(.subheadline, design: .monospaced)
-        }
-        return emphasizeValue ? .headline : .subheadline
-    }
-}
-
 private struct OverviewPathRow: View {
     let title: String
     let badge: String
@@ -542,11 +471,11 @@ private struct OverviewPathRow: View {
                 Text(L10n.string(title))
                     .font(.headline)
 
-                OverviewBadge(text: badge, tint: .secondary)
+                HermesBadge(text: badge, tint: .secondary)
 
                 Spacer(minLength: 12)
 
-                OverviewBadge(text: isReady ? "Ready" : "Missing", tint: isReady ? .green : .orange)
+                HermesBadge(text: isReady ? "Ready" : "Missing", tint: isReady ? .green : .orange)
             }
 
             Text(value)
@@ -588,19 +517,5 @@ private struct OverviewStatusRow: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(item.isReady ? .green : .orange)
         }
-    }
-}
-
-private struct OverviewBadge: View {
-    let text: String
-    let tint: Color
-
-    var body: some View {
-        Text(L10n.string(text))
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(tint)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(tint.opacity(0.12), in: Capsule())
     }
 }

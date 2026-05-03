@@ -140,6 +140,24 @@ struct HermesLoadingOverlay: View {
     }
 }
 
+struct HermesValidationMessage: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(.orange)
+
+            Text(L10n.string(text))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
 struct HermesRefreshButton: View {
     let isRefreshing: Bool
     let action: () -> Void

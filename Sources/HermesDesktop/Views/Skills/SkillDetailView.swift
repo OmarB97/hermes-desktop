@@ -218,7 +218,7 @@ struct SkillDetailView: View {
 
                 if !detail.featureBadges.isEmpty {
                     SkillMetadataSection(title: "Companion directories") {
-                        WrappingFlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
+                        HermesWrappingFlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
                             ForEach(detail.featureBadges) { badge in
                                 SkillMetadataBadge(text: badge.title, tint: badge.color)
                             }
@@ -553,7 +553,7 @@ private struct SkillMetadataBadgeGroup: View {
     var monospaced = false
 
     var body: some View {
-        WrappingFlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
+        HermesWrappingFlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
             ForEach(values, id: \.self) { value in
                 SkillMetadataBadge(
                     text: value,
@@ -586,105 +586,4 @@ private struct SkillMetadataBadge: View {
             }
             .help(text)
         }
-}
-
-private struct WrappingFlowLayout: Layout {
-    let horizontalSpacing: CGFloat
-    let verticalSpacing: CGFloat
-
-    init(horizontalSpacing: CGFloat = 8, verticalSpacing: CGFloat = 8) {
-        self.horizontalSpacing = horizontalSpacing
-        self.verticalSpacing = verticalSpacing
-    }
-
-    func sizeThatFits(
-        proposal: ProposedViewSize,
-        subviews: Subviews,
-        cache: inout Void
-    ) -> CGSize {
-        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
-        let lines = computeLines(for: sizes, maxWidth: proposal.width)
-        let height = lines.reduce(CGFloat.zero) { partial, line in
-            partial + line.height
-        } + verticalSpacing * CGFloat(max(0, lines.count - 1))
-        let width = proposal.width ?? lines.map(\.width).max() ?? 0
-        return CGSize(width: width, height: height)
-    }
-
-    func placeSubviews(
-        in bounds: CGRect,
-        proposal: ProposedViewSize,
-        subviews: Subviews,
-        cache: inout Void
-    ) {
-        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
-        let lines = computeLines(for: sizes, maxWidth: bounds.width)
-        var currentY = bounds.minY
-
-        for line in lines {
-            var currentX = bounds.minX
-            for item in line.items {
-                let size = sizes[item.index]
-                subviews[item.index].place(
-                    at: CGPoint(x: currentX, y: currentY),
-                    proposal: ProposedViewSize(width: size.width, height: size.height)
-                )
-                currentX += size.width + horizontalSpacing
-            }
-            currentY += line.height + verticalSpacing
-        }
-    }
-
-    private func computeLines(for sizes: [CGSize], maxWidth: CGFloat?) -> [FlowLine] {
-        let availableWidth = maxWidth ?? .greatestFiniteMagnitude
-        guard !sizes.isEmpty else { return [] }
-
-        var lines: [FlowLine] = []
-        var currentItems: [FlowLineItem] = []
-        var currentWidth: CGFloat = 0
-        var currentHeight: CGFloat = 0
-
-        for (index, size) in sizes.enumerated() {
-            let proposedWidth = currentItems.isEmpty ? size.width : currentWidth + horizontalSpacing + size.width
-
-            if !currentItems.isEmpty && proposedWidth > availableWidth {
-                lines.append(
-                    FlowLine(
-                        items: currentItems,
-                        width: currentWidth,
-                        height: currentHeight
-                    )
-                )
-                currentItems = [FlowLineItem(index: index)]
-                currentWidth = size.width
-                currentHeight = size.height
-            } else {
-                currentItems.append(FlowLineItem(index: index))
-                currentWidth = proposedWidth
-                currentHeight = max(currentHeight, size.height)
-            }
-        }
-
-        if !currentItems.isEmpty {
-            lines.append(
-                FlowLine(
-                    items: currentItems,
-                    width: currentWidth,
-                    height: currentHeight
-                )
-            )
-        }
-
-        return lines
-    }
-}
-
-private struct FlowLine {
-    let items: [FlowLineItem]
-    let width: CGFloat
-    let height: CGFloat
-}
-
-private struct FlowLineItem {
-    let index: Int
 }

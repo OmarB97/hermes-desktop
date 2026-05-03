@@ -13,5 +13,8 @@ struct HermesDesktopApp: App {
                 .frame(minWidth: 940, minHeight: 520)
         }
         .defaultSize(width: 1360, height: 860)
+        .commands {
+            HermesDesktopCommands(appState: appState)
+        }
     }
 }

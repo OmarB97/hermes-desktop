@@ -19,7 +19,7 @@ struct SkillsView: View {
                         Button {
                             startCreating()
                         } label: {
-                            Label("New", systemImage: "plus")
+                            Label(L10n.string("New"), systemImage: "plus")
                         }
                         .buttonStyle(.borderedProminent)
                         .disabled(appState.isSavingSkillDraft)
@@ -139,10 +139,10 @@ struct SkillsView: View {
         let filtered = filteredSkills.count
 
         if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return "Discovered Skills (\(total))"
+            return L10n.string("Discovered Skills (%@)", "\(total)")
         }
 
-        return "Discovered Skills (\(filtered) of \(total))"
+        return L10n.string("Discovered Skills (%@ of %@)", "\(filtered)", "\(total)")
     }
 
     private var filteredSkills: [SkillSummary] {

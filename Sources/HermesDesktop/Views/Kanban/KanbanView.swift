@@ -371,10 +371,10 @@ struct KanbanView: View {
             appState.includeArchivedKanbanTasks
 
         if isFiltering {
-            return "Kanban Tasks (\(filtered) of \(total))"
+            return L10n.string("Kanban Tasks (%@ of %@)", "\(filtered)", "\(total)")
         }
 
-        return "Kanban Tasks (\(total))"
+        return L10n.string("Kanban Tasks (%@)", "\(total)")
     }
 
     private func boardSubtitle(_ board: KanbanBoard) -> String {
@@ -384,7 +384,7 @@ struct KanbanView: View {
     private func dispatcherWarning(for board: KanbanBoard) -> String? {
         guard board.tasks.contains(where: { $0.status == .ready }) else { return nil }
         guard board.dispatcher?.isKnownInactive == true else { return nil }
-        return board.dispatcher?.message ?? "Ready tasks are waiting, but the Hermes gateway dispatcher does not appear to be active."
+        return board.dispatcher?.message ?? "Ready tasks are waiting, but the remote Hermes dispatcher does not appear to be active."
     }
 
     private func selectTask(_ task: KanbanTask) {
@@ -650,6 +650,10 @@ private struct KanbanTaskEditorView: View {
                                 ProgressView()
                                     .controlSize(.small)
                             }
+                        }
+
+                        if let validationError = draft.validationError {
+                            HermesValidationMessage(text: validationError)
                         }
                     }
                 }

@@ -868,7 +868,7 @@ private struct UsageStackedComparisonBar: View {
     var body: some View {
         GeometryReader { geometry in
             let width = geometry.size.width
-            let inputWidth = max(10, width * inputFraction)
+            let inputWidth = max(summary.inputTokens > 0 ? 10 : 0, width * inputFraction)
             let outputWidth = max(summary.outputTokens > 0 ? 10 : 0, width * outputFraction)
 
             ZStack(alignment: .leading) {

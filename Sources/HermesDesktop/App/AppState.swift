@@ -66,6 +66,7 @@ final class AppState: ObservableObject {
     @Published var isLoadingWorkspaceFileBrowser = false
     @Published var pendingSectionSelection: AppSection?
     @Published var showDiscardChangesAlert = false
+    @Published var pendingNewConnectionEditorRequestID: UUID?
 
     let connectionStore: ConnectionStore
     let sshTransport: SSHTransport
@@ -81,6 +82,7 @@ final class AppState: ObservableObject {
 
     private let sessionPageSize = 50
     private var sessionOffset = 0
+    private var sessionMessageSignature = SessionMessageSignature(messages: [])
     private var statusTask: Task<Void, Never>?
     private var sessionTranscriptPollingTask: Task<Void, Never>?
     private var cancellables = Set<AnyCancellable>()
@@ -171,6 +173,37 @@ final class AppState: ObservableObject {
         workspaceFileDocuments.values.contains { $0.isDirty }
     }
 
+    var canRefreshCurrentSection: Bool {
+        guard activeConnection != nil else { return false }
+
+        switch selectedSection {
+        case .overview:
+            return !isRefreshingOverview && !isBusy
+        case .sessions:
+            return !isLoadingSessions && !isRefreshingSessions
+        case .cronjobs:
+            return !isLoadingCronJobs && !isRefreshingCronJobs
+        case .kanban:
+            return !isLoadingKanbanBoard && !isRefreshingKanbanBoard
+        case .usage:
+            return !isLoadingUsage && !isRefreshingUsage
+        case .skills:
+            return !isLoadingSkills && !isRefreshingSkills
+        case .connections, .files, .terminal:
+            return false
+        }
+    }
+
+    var canSaveCurrentWorkspaceFile: Bool {
+        guard selectedSection == .files else { return false }
+        guard let document = workspaceFileDocuments[selectedWorkspaceFileID] else { return false }
+        return document.hasLoaded && document.isDirty && !document.isLoading
+    }
+
+    func isSectionAvailable(_ section: AppSection) -> Bool {
+        section == .connections || activeConnection != nil
+    }
+
     func requestSectionSelection(_ section: AppSection) {
         guard selectedSection != section else { return }
         guard section != .files || activeConnection != nil else {
@@ -186,6 +219,53 @@ final class AppState: ObservableObject {
 
         selectedSection = section
         handleSectionEntry(section)
+    }
+
+    func requestNewConnectionEditorFromCommand() {
+        requestSectionSelection(.connections)
+        guard selectedSection == .connections else { return }
+        pendingNewConnectionEditorRequestID = UUID()
+    }
+
+    func consumeNewConnectionEditorRequest(_ requestID: UUID) {
+        guard pendingNewConnectionEditorRequestID == requestID else { return }
+        pendingNewConnectionEditorRequestID = nil
+    }
+
+    func requestNewSessionFromCommand() {
+        guard activeConnection != nil, !isSendingSessionMessage else { return }
+        requestSectionSelection(.sessions)
+        guard selectedSection == .sessions else { return }
+        prepareNewSessionComposer()
+    }
+
+    func openNewTerminalTabFromCommand() {
+        guard let profile = activeConnection else { return }
+        terminalWorkspace.addTab(for: profile.updated())
+        selectedSection = .terminal
+        handleSectionEntry(.terminal)
+        setStatusMessage(L10n.string("New Terminal tab opened"))
+    }
+
+    func refreshCurrentSectionFromCommand() async {
+        guard canRefreshCurrentSection else { return }
+
+        switch selectedSection {
+        case .overview:
+            await refreshOverview(manual: true)
+        case .sessions:
+            await refreshSessions(query: sessionSearchQuery)
+        case .cronjobs:
+            await refreshCronJobs()
+        case .kanban:
+            await refreshKanbanBoard()
+        case .usage:
+            await refreshUsage()
+        case .skills:
+            await refreshSkills()
+        case .connections, .files, .terminal:
+            break
+        }
     }
 
     func discardChangesAndContinue() {
@@ -595,7 +675,7 @@ final class AppState: ObservableObject {
                     await loadSessionDetail(sessionID: preferredSessionID)
                 } else {
                     selectedSessionID = nil
-                    setSessionMessages([])
+                    clearSessionMessages()
                 }
             }
         } catch {
@@ -608,7 +688,7 @@ final class AppState: ObservableObject {
     func loadSessionDetail(sessionID: String) async {
         guard let profile = activeConnection else { return }
         if selectedSessionID != sessionID {
-            setSessionMessages([])
+            clearSessionMessages()
         }
         selectedSessionID = sessionID
         sessionsError = nil
@@ -619,9 +699,9 @@ final class AppState: ObservableObject {
                 connection: profile,
                 sessionID: sessionID
             )
-            setSessionMessages(messages)
+            await setSessionMessages(messages)
         } catch {
-            setSessionMessages([])
+            clearSessionMessages()
             sessionsError = error.localizedDescription
             setStatusMessage(L10n.string("Unable to load session transcript"))
         }
@@ -629,7 +709,7 @@ final class AppState: ObservableObject {
 
     func prepareNewSessionComposer() {
         selectedSessionID = nil
-        setSessionMessages([])
+        clearSessionMessages()
         sessionsError = nil
         sessionConversationError = nil
     }
@@ -1446,10 +1526,42 @@ final class AppState: ObservableObject {
         }
     }
 
-    private func setSessionMessages(_ messages: [SessionMessage]) {
-        guard sessionMessages != messages else { return }
+    private func clearSessionMessages() {
+        guard !sessionMessages.isEmpty || !sessionMessageDisplays.isEmpty else { return }
+        sessionMessages = []
+        sessionMessageDisplays = []
+        sessionMessageSignature = SessionMessageSignature(messages: [])
+    }
+
+    private func setSessionMessages(_ messages: [SessionMessage]) async {
+        let signature = await Task.detached(priority: .userInitiated) {
+            SessionMessageSignature(messages: messages)
+        }.value
+
+        guard signature != sessionMessageSignature else { return }
+
+        let displays = await Task.detached(priority: .userInitiated) {
+            Self.makeSessionMessageDisplays(from: messages)
+        }.value
+
+        applySessionMessages(messages, displays: displays, signature: signature)
+    }
+
+    private func applySessionMessages(
+        _ messages: [SessionMessage],
+        displays: [SessionMessageDisplay],
+        signature: SessionMessageSignature
+    ) {
+        guard signature != sessionMessageSignature else { return }
         sessionMessages = messages
-        sessionMessageDisplays = messages.map(SessionMessageDisplay.init)
+        sessionMessageDisplays = displays
+        sessionMessageSignature = signature
+    }
+
+    nonisolated private static func makeSessionMessageDisplays(
+        from messages: [SessionMessage]
+    ) -> [SessionMessageDisplay] {
+        messages.map(SessionMessageDisplay.init)
     }
 
     private func startSessionTranscriptPolling(sessionID: String, connection: ConnectionProfile) {
@@ -1457,14 +1569,33 @@ final class AppState: ObservableObject {
 
         sessionTranscriptPollingTask = Task { [sessionBrowserService] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(2))
-                guard !Task.isCancelled else { return }
-
                 do {
                     let messages = try await sessionBrowserService.loadTranscript(
                         connection: connection,
                         sessionID: sessionID
                     )
+
+                    let signature = await Task.detached(priority: .utility) {
+                        SessionMessageSignature(messages: messages)
+                    }.value
+
+                    let shouldBuildDisplays = await MainActor.run { [weak self] in
+                        guard let self,
+                              self.isSendingSessionMessage,
+                              self.selectedSessionID == sessionID else {
+                            return false
+                        }
+                        return signature != self.sessionMessageSignature
+                    }
+
+                    guard shouldBuildDisplays else {
+                        try? await Task.sleep(for: .seconds(2))
+                        continue
+                    }
+
+                    let displays = await Task.detached(priority: .utility) {
+                        Self.makeSessionMessageDisplays(from: messages)
+                    }.value
 
                     await MainActor.run { [weak self] in
                         guard let self,
@@ -1472,11 +1603,14 @@ final class AppState: ObservableObject {
                               self.selectedSessionID == sessionID else {
                             return
                         }
-                        self.setSessionMessages(messages)
+                        self.applySessionMessages(messages, displays: displays, signature: signature)
                     }
                 } catch {
-                    continue
+                    // Keep polling best-effort; a transient SSH/store read failure
+                    // should not end the in-flight chat turn.
                 }
+
+                try? await Task.sleep(for: .seconds(2))
             }
         }
     }
@@ -1572,7 +1706,7 @@ final class AppState: ObservableObject {
         guard overviewError == nil else {
             isRefreshingOverview = false
             sessions = []
-            setSessionMessages([])
+            clearSessionMessages()
             sessionsError = nil
             isLoadingSessions = false
             isRefreshingSessions = false
@@ -1626,7 +1760,7 @@ final class AppState: ObservableObject {
         overviewError = nil
         isRefreshingOverview = false
         sessions = []
-        setSessionMessages([])
+        clearSessionMessages()
         sessionsError = nil
         isLoadingSessions = false
         isRefreshingSessions = false
@@ -1701,6 +1835,27 @@ final class AppState: ObservableObject {
                 self.statusMessage = nil
             }
         }
+    }
+}
+
+private struct SessionMessageSignature: Equatable, Sendable {
+    let count: Int
+    let digest: Int
+
+    init(messages: [SessionMessage]) {
+        var hasher = Hasher()
+        hasher.combine(messages.count)
+
+        for message in messages {
+            hasher.combine(message.id)
+            hasher.combine(message.role)
+            hasher.combine(message.content)
+            hasher.combine(message.timestamp)
+            hasher.combine(message.metadata)
+        }
+
+        count = messages.count
+        digest = hasher.finalize()
     }
 }
 

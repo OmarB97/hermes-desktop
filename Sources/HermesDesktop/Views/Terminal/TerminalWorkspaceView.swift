@@ -10,15 +10,25 @@ struct TerminalWorkspaceView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                ForEach(workspace.tabs) { tab in
-                    TerminalTabChip(
-                        profileName: tab.session.connection.resolvedHermesProfileName,
-                        hostLabel: tab.session.connection.label,
-                        isSelected: workspace.selectedTabID == tab.id,
-                        isCurrentWorkspace: isTabForActiveWorkspace(tab),
-                        onSelect: { requestTabSelection(tab.id) },
-                        onClose: { requestTabClose(tab) }
-                    )
+                if !workspace.tabs.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(workspace.tabs) { tab in
+                                TerminalTabChip(
+                                    profileName: tab.session.connection.resolvedHermesProfileName,
+                                    hostLabel: tab.session.connection.label,
+                                    isSelected: workspace.selectedTabID == tab.id,
+                                    isCurrentWorkspace: isTabForActiveWorkspace(tab),
+                                    onSelect: { requestTabSelection(tab.id) },
+                                    onClose: { requestTabClose(tab) }
+                                )
+                                .frame(width: 190)
+                            }
+                        }
+                        .padding(.vertical, 1)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .layoutPriority(1)
                 }
 
                 if let activeConnection = context.activeConnection {
@@ -30,7 +40,7 @@ struct TerminalWorkspaceView: View {
                     .buttonStyle(.borderedProminent)
                 }
 
-                Spacer()
+                Spacer(minLength: 8)
 
                 TerminalAppearanceToolbarButton(
                     appearance: terminalAppearance,

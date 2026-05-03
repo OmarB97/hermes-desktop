@@ -41,9 +41,15 @@ struct SessionsView: View {
                 errorMessage: appState.sessionsError,
                 conversationError: appState.sessionConversationError,
                 isSendingMessage: appState.isSendingSessionMessage,
+                isDeletingSession: selectedSession.map { selectedSession in
+                    appState.isDeletingSession && appState.selectedSessionID == selectedSession.id
+                } ?? false,
                 pendingTurn: appState.pendingSessionTurn,
                 onResumeInTerminal: { session in
                     appState.resumeSessionInTerminal(session)
+                },
+                onDeleteSession: { session in
+                    await appState.deleteSession(session)
                 },
                 onStartSession: { prompt, autoApproveCommands in
                     await appState.startNewSession(

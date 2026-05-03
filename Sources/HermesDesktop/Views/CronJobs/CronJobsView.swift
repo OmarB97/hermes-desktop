@@ -236,10 +236,10 @@ struct CronJobsView: View {
         let isFiltering = filterMode != .all || !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
         if isFiltering {
-            return "Cron Jobs (\(filtered) of \(total))"
+            return L10n.string("Cron Jobs (%@ of %@)", "\(filtered)", "\(total)")
         }
 
-        return "Cron Jobs (\(total))"
+        return L10n.string("Cron Jobs (%@)", "\(total)")
     }
 
     private var cronJobsPath: String {
@@ -697,9 +697,9 @@ private struct CronJobEditorView: View {
                         Task { await onSave() }
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(isSaving)
+                    .disabled(isSaving || draft.validationError != nil)
 
-                    Button("Cancel", action: onCancel)
+                    Button(L10n.string("Cancel"), action: onCancel)
                         .buttonStyle(.bordered)
                         .disabled(isSaving)
 
@@ -707,6 +707,10 @@ private struct CronJobEditorView: View {
                         ProgressView()
                             .controlSize(.small)
                     }
+                }
+
+                if let validationError = draft.validationError {
+                    HermesValidationMessage(text: validationError)
                 }
             }
         }
