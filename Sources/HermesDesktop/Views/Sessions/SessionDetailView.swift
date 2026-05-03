@@ -707,6 +707,7 @@ private struct ConversationMessageCard: View {
                     HermesBadge(
                         text: displayRole,
                         tint: roleTint,
+                        systemImage: roleSystemImage,
                         isMonospaced: false
                     )
 
@@ -748,11 +749,24 @@ private struct ConversationMessageCard: View {
         case .assistant:
             return .blue
         case .user:
-            return .green
+            return .cyan
         case .system:
             return .orange
         case .event, .custom:
             return .secondary
+        }
+    }
+
+    private var roleSystemImage: String? {
+        switch message.role {
+        case .assistant:
+            return "sparkles"
+        case .user:
+            return "person.fill"
+        case .system:
+            return "gearshape.fill"
+        case .event, .custom:
+            return nil
         }
     }
 }
@@ -767,91 +781,135 @@ private struct ToolMessageCard: View {
     }
 
     var body: some View {
-        HermesInsetSurface {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .center, spacing: 8) {
-                    HermesBadge(text: L10n.string("Tool"), tint: .secondary, isMonospaced: false)
+        VStack(alignment: .leading, spacing: 8) {
+            toolHeader
 
-                    if let summary,
-                       let statusText = summary.statusText {
-                        HermesBadge(text: statusText, tint: statusTint, isMonospaced: false)
-                    }
+            if isExpanded {
+                ToolOutputView(content: message.content, summary: summary)
 
-                    if let sizeText = summary?.sizeText {
-                        Text(sizeText)
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer(minLength: 10)
-
-                    if let timestampText = message.timestampText {
-                        Text(timestampText)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Button {
-                    withAnimation(.easeInOut(duration: 0.16)) {
-                        isExpanded.toggle()
-                    }
-                } label: {
-                    HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 10, height: 20)
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(summary?.title ?? L10n.string("Tool output"))
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.primary)
-
-                            if let preview = summary?.preview, !preview.isEmpty {
-                                Text(preview)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(isExpanded ? 3 : 2)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            } else {
-                                Text(L10n.string("No output preview"))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        Spacer(minLength: 10)
-
-                        Text(L10n.string(isExpanded ? "Hide details" : "Details"))
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .buttonStyle(.plain)
-
-                if isExpanded {
-                    ToolOutputView(content: message.content, summary: summary)
-
-                    if !message.metadataItems.isEmpty {
-                        MetadataDisclosureView(
-                            items: message.metadataItems,
-                            isShowingMetadata: $isShowingMetadata
-                        )
-                    }
+                if !message.metadataItems.isEmpty {
+                    MetadataDisclosureView(
+                        items: message.metadataItems,
+                        isShowingMetadata: $isShowingMetadata
+                    )
                 }
             }
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.secondary.opacity(0.045))
+        )
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(statusTint.opacity(0.72))
+                .frame(width: 3)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(
+                    Color.secondary.opacity(0.16),
+                    style: StrokeStyle(lineWidth: 1, dash: [4, 4])
+                )
+        }
+    }
+
+    private var toolHeader: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.16)) {
+                isExpanded.toggle()
+            }
+        } label: {
+            HStack(alignment: .center, spacing: 8) {
+                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 10)
+
+                HermesBadge(
+                    text: L10n.string("Tool"),
+                    tint: .secondary,
+                    systemImage: "wrench.and.screwdriver.fill",
+                    isMonospaced: false
+                )
+
+                if let summary,
+                   let statusText = summary.statusText {
+                    HermesBadge(
+                        text: statusText,
+                        tint: statusTint,
+                        systemImage: statusSystemImage,
+                        prominence: statusProminence,
+                        isMonospaced: false
+                    )
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(summary?.title ?? L10n.string("Tool output"))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+
+                    Text(summaryPreview)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 10)
+
+                if let sizeText = summary?.sizeText {
+                    Text(sizeText)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+
+                Text(L10n.string(isExpanded ? "Hide details" : "Details"))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var summaryPreview: String {
+        if let preview = summary?.preview, !preview.isEmpty {
+            return preview
+        }
+
+        return L10n.string("No output preview")
     }
 
     private var statusTint: Color {
         switch summary?.statusKind {
         case .success:
-            return .green
+            return Color(red: 0.0, green: 0.58, blue: 0.22)
         case .failure:
             return .red
         case .neutral, .none:
             return .secondary
+        }
+    }
+
+    private var statusSystemImage: String? {
+        switch summary?.statusKind {
+        case .success:
+            return "checkmark.circle.fill"
+        case .failure:
+            return "xmark.octagon.fill"
+        case .neutral, .none:
+            return nil
+        }
+    }
+
+    private var statusProminence: HermesBadge.BadgeProminence {
+        switch summary?.statusKind {
+        case .success, .failure:
+            return .strong
+        case .neutral, .none:
+            return .subtle
         }
     }
 }

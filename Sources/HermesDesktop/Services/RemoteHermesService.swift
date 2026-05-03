@@ -26,7 +26,9 @@ final class RemoteHermesService: @unchecked Sendable {
     private var discoveryScript: String {
         """
         import json
+        import os
         import pathlib
+        import shutil
         import sqlite3
 
         def discover_session_store(hermes_home: pathlib.Path):
@@ -56,6 +58,57 @@ final class RemoteHermesService: @unchecked Sendable {
 
             return None
 
+        def find_hermes_binary():
+            candidate = shutil.which("hermes")
+            if candidate:
+                return candidate
+
+            fallback = pathlib.Path.home() / ".local" / "bin" / "hermes"
+            if fallback.exists() and os.access(fallback, os.X_OK):
+                return str(fallback)
+
+            return None
+
+        def discover_kanban(default_hermes_home: pathlib.Path, home: pathlib.Path):
+            kanban_db = default_hermes_home / "kanban.db"
+            previous_hermes_home = os.environ.get("HERMES_HOME")
+            os.environ["HERMES_HOME"] = str(default_hermes_home)
+
+            has_kanban_module = False
+            dispatcher = None
+            try:
+                import hermes_cli.kanban_db  # noqa: F401
+                has_kanban_module = True
+            except Exception:
+                has_kanban_module = False
+
+            try:
+                import hermes_cli.kanban as kanban_cli
+                running, message = kanban_cli._check_dispatcher_presence()
+                dispatcher = {
+                    "running": bool(running),
+                    "message": message or None,
+                }
+            except Exception:
+                dispatcher = {
+                    "running": None,
+                    "message": None,
+                }
+
+            if previous_hermes_home is None:
+                os.environ.pop("HERMES_HOME", None)
+            else:
+                os.environ["HERMES_HOME"] = previous_hermes_home
+
+            return {
+                "database_path": tilde(kanban_db, home),
+                "exists": kanban_db.exists(),
+                "host_wide": True,
+                "has_hermes_cli": find_hermes_binary() is not None,
+                "has_kanban_module": has_kanban_module,
+                "dispatcher": dispatcher,
+            }
+
         try:
             home = pathlib.Path.home()
             default_hermes_home = home / ".hermes"
@@ -65,6 +118,7 @@ final class RemoteHermesService: @unchecked Sendable {
             soul_path = hermes_home / "SOUL.md"
             sessions_dir = hermes_home / "sessions"
             cron_jobs_path = hermes_home / "cron" / "jobs.json"
+            kanban_database_path = default_hermes_home / "kanban.db"
             profiles_dir = default_hermes_home / "profiles"
 
             available_profiles = [{
@@ -109,6 +163,7 @@ final class RemoteHermesService: @unchecked Sendable {
                     "soul": tilde(soul_path, home),
                     "sessions_dir": tilde(sessions_dir, home),
                     "cron_jobs": tilde(cron_jobs_path, home),
+                    "kanban_database": tilde(kanban_database_path, home),
                 },
                 "exists": {
                     "user": user_path.exists(),
@@ -116,8 +171,10 @@ final class RemoteHermesService: @unchecked Sendable {
                     "soul": soul_path.exists(),
                     "sessions_dir": sessions_dir.exists(),
                     "cron_jobs": cron_jobs_path.exists(),
+                    "kanban_database": kanban_database_path.exists(),
                 },
                 "session_store": discover_session_store(hermes_home),
+                "kanban": discover_kanban(default_hermes_home, home),
             }
 
             print(json.dumps(result, ensure_ascii=False))

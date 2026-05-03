@@ -18,6 +18,8 @@ struct ConnectionProfileTests {
         #expect(profile.remoteHermesHomePath == "~/.hermes")
         #expect(profile.remoteSkillsPath == "~/.hermes/skills")
         #expect(profile.remoteCronJobsPath == "~/.hermes/cron/jobs.json")
+        #expect(profile.remoteKanbanHomePath == "~/.hermes")
+        #expect(profile.remoteKanbanDatabasePath == "~/.hermes/kanban.db")
         #expect(profile.remotePath(for: .memory) == "~/.hermes/memories/MEMORY.md")
         #expect(
             profile.remoteShellBootstrapCommand ==
@@ -43,6 +45,8 @@ struct ConnectionProfileTests {
 
         #expect(profileScoped.resolvedHermesProfileName == "researcher")
         #expect(profileScoped.remoteHermesHomePath == "~/.hermes/profiles/researcher")
+        #expect(profileScoped.remoteKanbanHomePath == "~/.hermes")
+        #expect(profileScoped.remoteKanbanDatabasePath == "~/.hermes/kanban.db")
         #expect(
             profileScoped.remoteShellBootstrapCommand ==
                 "export HERMES_HOME=\"$HOME/.hermes/profiles/researcher\"; exec \"${SHELL:-/bin/zsh}\" -l"

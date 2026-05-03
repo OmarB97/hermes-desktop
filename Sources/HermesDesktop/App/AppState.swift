@@ -47,6 +47,18 @@ final class AppState: ObservableObject {
     @Published var isOperatingOnCronJob = false
     @Published var operatingCronJobID: String?
     @Published var isSavingCronJobDraft = false
+    @Published var kanbanBoard: KanbanBoard?
+    @Published var selectedKanbanTaskID: String?
+    @Published var selectedKanbanTaskDetail: KanbanTaskDetail?
+    @Published var kanbanError: String?
+    @Published var isLoadingKanbanBoard = false
+    @Published var isRefreshingKanbanBoard = false
+    @Published var isLoadingKanbanTaskDetail = false
+    @Published var isOperatingOnKanbanTask = false
+    @Published var operatingKanbanTaskID: String?
+    @Published var isSavingKanbanTaskDraft = false
+    @Published var isDispatchingKanban = false
+    @Published var includeArchivedKanbanTasks = false
     @Published var selectedWorkspaceFileID: String = RemoteTrackedFile.memory.workspaceFileID
     @Published var workspaceFileDocuments: [String: FileEditorDocument] = [:]
     @Published var workspaceFileBrowserListing: RemoteDirectoryListing?
@@ -64,6 +76,7 @@ final class AppState: ObservableObject {
     let usageBrowserService: UsageBrowserService
     let skillBrowserService: SkillBrowserService
     let cronBrowserService: CronBrowserService
+    let kanbanBrowserService: KanbanBrowserService
     let terminalWorkspace: TerminalWorkspaceStore
 
     private let sessionPageSize = 50
@@ -86,6 +99,7 @@ final class AppState: ObservableObject {
         self.usageBrowserService = UsageBrowserService(sshTransport: sshTransport)
         self.skillBrowserService = SkillBrowserService(sshTransport: sshTransport)
         self.cronBrowserService = CronBrowserService(sshTransport: sshTransport)
+        self.kanbanBrowserService = KanbanBrowserService(sshTransport: sshTransport)
         self.terminalWorkspace = TerminalWorkspaceStore(sshTransport: sshTransport)
 
         connectionStore.objectWillChange
@@ -365,6 +379,13 @@ final class AppState: ObservableObject {
         isRefreshingCronJobs = true
         await loadCronJobs()
         isRefreshingCronJobs = false
+    }
+
+    func refreshKanbanBoard(includeArchived: Bool? = nil) async {
+        guard !isLoadingKanbanBoard, !isRefreshingKanbanBoard else { return }
+        isRefreshingKanbanBoard = true
+        await loadKanbanBoard(includeArchived: includeArchived)
+        isRefreshingKanbanBoard = false
     }
 
     func workspaceFileDocument(for fileID: String) -> FileEditorDocument? {
@@ -734,22 +755,27 @@ final class AppState: ObservableObject {
 
         isLoadingUsage = true
         usageError = nil
-        usageProfileBreakdown = nil
 
         do {
-            usageSummary = try await usageBrowserService.loadUsage(
+            let summary = try await usageBrowserService.loadUsage(
                 connection: profile,
                 hintedSessionStore: overview?.sessionStore
             )
 
+            let profileBreakdown: UsageProfileBreakdown?
             if let overview,
                overview.availableProfiles.count > 1 {
-                usageProfileBreakdown = try await loadUsageProfileBreakdown(
+                profileBreakdown = await loadUsageProfileBreakdown(
                     using: profile,
+                    activeSummary: summary,
                     discoveredProfiles: overview.availableProfiles
                 )
+            } else {
+                profileBreakdown = nil
             }
 
+            usageSummary = summary
+            usageProfileBreakdown = profileBreakdown
             isLoadingUsage = false
         } catch {
             isLoadingUsage = false
@@ -1078,6 +1104,209 @@ final class AppState: ObservableObject {
         }
     }
 
+    func loadKanbanBoard(includeArchived: Bool? = nil) async {
+        guard let profile = activeConnection else { return }
+        if isLoadingKanbanBoard { return }
+
+        if let includeArchived {
+            includeArchivedKanbanTasks = includeArchived
+        }
+
+        let previousSelectedTaskID = selectedKanbanTaskID
+        isLoadingKanbanBoard = true
+        kanbanError = nil
+
+        do {
+            let board = try await kanbanBrowserService.loadBoard(
+                connection: profile,
+                includeArchived: includeArchivedKanbanTasks
+            )
+            kanbanBoard = board
+            isLoadingKanbanBoard = false
+
+            let nextSelectedTaskID: String?
+            if let previousSelectedTaskID,
+               board.tasks.contains(where: { $0.id == previousSelectedTaskID }) {
+                nextSelectedTaskID = previousSelectedTaskID
+            } else {
+                nextSelectedTaskID = board.tasks.first?.id
+            }
+
+            selectedKanbanTaskID = nextSelectedTaskID
+            if let nextSelectedTaskID {
+                await loadKanbanTaskDetail(taskID: nextSelectedTaskID)
+            } else {
+                selectedKanbanTaskDetail = nil
+            }
+        } catch {
+            isLoadingKanbanBoard = false
+            kanbanError = error.localizedDescription
+            setStatusMessage(L10n.string("Unable to load Kanban board"))
+        }
+    }
+
+    func loadKanbanTaskDetail(taskID: String) async {
+        guard let profile = activeConnection else { return }
+
+        selectedKanbanTaskID = taskID
+        isLoadingKanbanTaskDetail = true
+        kanbanError = nil
+
+        do {
+            let detail = try await kanbanBrowserService.loadTaskDetail(
+                connection: profile,
+                taskID: taskID
+            )
+            guard selectedKanbanTaskID == taskID else { return }
+            selectedKanbanTaskDetail = detail
+            isLoadingKanbanTaskDetail = false
+        } catch {
+            guard selectedKanbanTaskID == taskID else { return }
+            selectedKanbanTaskDetail = nil
+            isLoadingKanbanTaskDetail = false
+            kanbanError = error.localizedDescription
+            setStatusMessage(L10n.string("Unable to load Kanban task"))
+        }
+    }
+
+    func createKanbanTask(_ draft: KanbanTaskDraft) async -> Bool {
+        guard let profile = activeConnection else { return false }
+        guard !isSavingKanbanTaskDraft, !isOperatingOnKanbanTask else { return false }
+
+        if let validationError = draft.validationError {
+            kanbanError = validationError
+            setStatusMessage(validationError)
+            return false
+        }
+
+        isSavingKanbanTaskDraft = true
+        kanbanError = nil
+        setStatusMessage(L10n.string("Creating Kanban task..."))
+
+        do {
+            let taskID = try await kanbanBrowserService.createTask(connection: profile, draft: draft)
+            await loadKanbanBoard(includeArchived: includeArchivedKanbanTasks)
+            selectedKanbanTaskID = taskID
+            await loadKanbanTaskDetail(taskID: taskID)
+            isSavingKanbanTaskDraft = false
+            setStatusMessage(L10n.string("Kanban task created"))
+            return true
+        } catch {
+            isSavingKanbanTaskDraft = false
+            kanbanError = error.localizedDescription
+            setStatusMessage(L10n.string("Unable to create Kanban task"))
+            return false
+        }
+    }
+
+    func addKanbanComment(taskID: String, body: String) async -> Bool {
+        guard let profile = activeConnection else { return false }
+        guard !isOperatingOnKanbanTask else { return false }
+
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+
+        isOperatingOnKanbanTask = true
+        operatingKanbanTaskID = taskID
+        kanbanError = nil
+
+        do {
+            try await kanbanBrowserService.addComment(connection: profile, taskID: taskID, body: trimmed)
+            await reloadKanbanAfterOperation(taskID: taskID)
+            isOperatingOnKanbanTask = false
+            operatingKanbanTaskID = nil
+            setStatusMessage(L10n.string("Comment added"))
+            return true
+        } catch {
+            isOperatingOnKanbanTask = false
+            operatingKanbanTaskID = nil
+            kanbanError = error.localizedDescription
+            setStatusMessage(L10n.string("Unable to add Kanban comment"))
+            return false
+        }
+    }
+
+    func assignKanbanTask(taskID: String, assignee: String?) async {
+        await operateOnKanbanTask(
+            taskID: taskID,
+            successMessage: "Kanban task assigned",
+            failureMessage: "Unable to assign Kanban task"
+        ) { profile in
+            try await kanbanBrowserService.assignTask(connection: profile, taskID: taskID, assignee: assignee)
+        }
+    }
+
+    func blockKanbanTask(taskID: String, reason: String?) async {
+        await operateOnKanbanTask(
+            taskID: taskID,
+            successMessage: "Kanban task blocked",
+            failureMessage: "Unable to block Kanban task"
+        ) { profile in
+            try await kanbanBrowserService.blockTask(connection: profile, taskID: taskID, reason: reason)
+        }
+    }
+
+    func unblockKanbanTask(taskID: String) async {
+        await operateOnKanbanTask(
+            taskID: taskID,
+            successMessage: "Kanban task unblocked",
+            failureMessage: "Unable to unblock Kanban task"
+        ) { profile in
+            try await kanbanBrowserService.unblockTask(connection: profile, taskID: taskID)
+        }
+    }
+
+    func completeKanbanTask(taskID: String, result: String?) async {
+        await operateOnKanbanTask(
+            taskID: taskID,
+            successMessage: "Kanban task completed",
+            failureMessage: "Unable to complete Kanban task"
+        ) { profile in
+            try await kanbanBrowserService.completeTask(connection: profile, taskID: taskID, result: result)
+        }
+    }
+
+    func archiveKanbanTask(taskID: String) async {
+        await operateOnKanbanTask(
+            taskID: taskID,
+            successMessage: "Kanban task archived",
+            failureMessage: "Unable to archive Kanban task"
+        ) { profile in
+            try await kanbanBrowserService.archiveTask(connection: profile, taskID: taskID)
+        }
+    }
+
+    func dispatchKanbanNow() async {
+        guard let profile = activeConnection else { return }
+        guard !isDispatchingKanban else { return }
+
+        isDispatchingKanban = true
+        kanbanError = nil
+        setStatusMessage(L10n.string("Nudging Kanban dispatcher..."))
+
+        do {
+            let result = try await kanbanBrowserService.dispatchNow(connection: profile)
+            await loadKanbanBoard(includeArchived: includeArchivedKanbanTasks)
+            isDispatchingKanban = false
+
+            if let result {
+                setStatusMessage(
+                    L10n.string(
+                        "Kanban dispatch: %@ spawned, %@ promoted",
+                        "\(result.spawned.count)",
+                        "\(result.promoted)"
+                    )
+                )
+            } else {
+                setStatusMessage(L10n.string("Kanban dispatcher nudged"))
+            }
+        } catch {
+            isDispatchingKanban = false
+            kanbanError = error.localizedDescription
+            setStatusMessage(L10n.string("Unable to nudge Kanban dispatcher"))
+        }
+    }
+
     func deleteConnection(_ profile: ConnectionProfile) {
         connectionStore.delete(profile)
         terminalWorkspace.closeTabs(forConnectionID: profile.id)
@@ -1110,6 +1339,41 @@ final class AppState: ObservableObject {
         setStatusMessage(L10n.string("Opening %@ in Terminal…", session.resolvedTitle))
     }
 
+    private func operateOnKanbanTask(
+        taskID: String,
+        successMessage: String,
+        failureMessage: String,
+        operation: (ConnectionProfile) async throws -> Void
+    ) async {
+        guard let profile = activeConnection else { return }
+        guard !isOperatingOnKanbanTask else { return }
+
+        isOperatingOnKanbanTask = true
+        operatingKanbanTaskID = taskID
+        kanbanError = nil
+
+        do {
+            try await operation(profile)
+            await reloadKanbanAfterOperation(taskID: taskID)
+            isOperatingOnKanbanTask = false
+            operatingKanbanTaskID = nil
+            setStatusMessage(L10n.string(successMessage))
+        } catch {
+            isOperatingOnKanbanTask = false
+            operatingKanbanTaskID = nil
+            kanbanError = error.localizedDescription
+            setStatusMessage(L10n.string(failureMessage))
+        }
+    }
+
+    private func reloadKanbanAfterOperation(taskID: String) async {
+        await loadKanbanBoard(includeArchived: includeArchivedKanbanTasks)
+        if kanbanBoard?.tasks.contains(where: { $0.id == taskID }) == true {
+            selectedKanbanTaskID = taskID
+            await loadKanbanTaskDetail(taskID: taskID)
+        }
+    }
+
     private func handleSectionEntry(_ section: AppSection) {
         switch section {
         case .overview:
@@ -1120,6 +1384,8 @@ final class AppState: ObservableObject {
             Task { await loadSessions(reset: true) }
         case .cronjobs:
             Task { await loadCronJobs() }
+        case .kanban:
+            Task { await loadKanbanBoard() }
         case .usage:
             Task { await loadUsage(forceRefresh: true) }
         case .skills:
@@ -1169,6 +1435,8 @@ final class AppState: ObservableObject {
             await loadSessions(reset: true)
         case .cronjobs:
             await loadCronJobs()
+        case .kanban:
+            await loadKanbanBoard()
         case .usage:
             await loadUsage(forceRefresh: true)
         case .skills:
@@ -1220,11 +1488,24 @@ final class AppState: ObservableObject {
 
     private func loadUsageProfileBreakdown(
         using connection: ConnectionProfile,
+        activeSummary: UsageSummary,
         discoveredProfiles: [RemoteHermesProfile]
-    ) async throws -> UsageProfileBreakdown {
+    ) async -> UsageProfileBreakdown {
         var slices: [UsageProfileSlice] = []
+        let activeProfileName = connection.resolvedHermesProfileName
 
         for discoveredProfile in discoveredProfiles {
+            if discoveredProfile.name == activeProfileName {
+                slices.append(
+                    usageProfileSlice(
+                        for: discoveredProfile,
+                        summary: activeSummary,
+                        activeProfileName: activeProfileName
+                    )
+                )
+                continue
+            }
+
             let scopedConnection = connection.applyingHermesProfile(named: discoveredProfile.name)
 
             do {
@@ -1234,19 +1515,10 @@ final class AppState: ObservableObject {
                 )
 
                 slices.append(
-                    UsageProfileSlice(
-                        profileName: discoveredProfile.name,
-                        hermesHomePath: discoveredProfile.path,
-                        state: summary.state,
-                        sessionCount: summary.sessionCount,
-                        inputTokens: summary.inputTokens,
-                        outputTokens: summary.outputTokens,
-                        cacheReadTokens: summary.cacheReadTokens,
-                        cacheWriteTokens: summary.cacheWriteTokens,
-                        reasoningTokens: summary.reasoningTokens,
-                        databasePath: summary.databasePath,
-                        message: summary.message,
-                        isActiveProfile: discoveredProfile.name == connection.resolvedHermesProfileName
+                    usageProfileSlice(
+                        for: discoveredProfile,
+                        summary: summary,
+                        activeProfileName: activeProfileName
                     )
                 )
             } catch {
@@ -1263,13 +1535,34 @@ final class AppState: ObservableObject {
                         reasoningTokens: 0,
                         databasePath: nil,
                         message: error.localizedDescription,
-                        isActiveProfile: discoveredProfile.name == connection.resolvedHermesProfileName
+                        isActiveProfile: discoveredProfile.name == activeProfileName
                     )
                 )
             }
         }
 
         return UsageProfileBreakdown(profiles: slices)
+    }
+
+    private func usageProfileSlice(
+        for discoveredProfile: RemoteHermesProfile,
+        summary: UsageSummary,
+        activeProfileName: String
+    ) -> UsageProfileSlice {
+        UsageProfileSlice(
+            profileName: discoveredProfile.name,
+            hermesHomePath: discoveredProfile.path,
+            state: summary.state,
+            sessionCount: summary.sessionCount,
+            inputTokens: summary.inputTokens,
+            outputTokens: summary.outputTokens,
+            cacheReadTokens: summary.cacheReadTokens,
+            cacheWriteTokens: summary.cacheWriteTokens,
+            reasoningTokens: summary.reasoningTokens,
+            databasePath: summary.databasePath,
+            message: summary.message,
+            isActiveProfile: discoveredProfile.name == activeProfileName
+        )
     }
 
     private func prepareWorkspaceForActiveConnection() async {
@@ -1308,6 +1601,18 @@ final class AppState: ObservableObject {
             isOperatingOnCronJob = false
             operatingCronJobID = nil
             isSavingCronJobDraft = false
+            kanbanBoard = nil
+            selectedKanbanTaskID = nil
+            selectedKanbanTaskDetail = nil
+            kanbanError = nil
+            isLoadingKanbanBoard = false
+            isRefreshingKanbanBoard = false
+            isLoadingKanbanTaskDetail = false
+            isOperatingOnKanbanTask = false
+            operatingKanbanTaskID = nil
+            isSavingKanbanTaskDraft = false
+            isDispatchingKanban = false
+            includeArchivedKanbanTasks = false
             resetDocuments()
             return
         }
@@ -1356,6 +1661,18 @@ final class AppState: ObservableObject {
         isOperatingOnCronJob = false
         operatingCronJobID = nil
         isSavingCronJobDraft = false
+        kanbanBoard = nil
+        selectedKanbanTaskID = nil
+        selectedKanbanTaskDetail = nil
+        kanbanError = nil
+        isLoadingKanbanBoard = false
+        isRefreshingKanbanBoard = false
+        isLoadingKanbanTaskDetail = false
+        isOperatingOnKanbanTask = false
+        operatingKanbanTaskID = nil
+        isSavingKanbanTaskDraft = false
+        isDispatchingKanban = false
+        includeArchivedKanbanTasks = false
         resetDocuments()
         if closeTerminalTabs {
             terminalWorkspace.closeAllTabs()

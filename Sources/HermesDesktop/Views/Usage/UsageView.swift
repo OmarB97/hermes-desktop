@@ -10,7 +10,7 @@ struct UsageView: View {
             VStack(alignment: .leading, spacing: 24) {
                 HermesPageHeader(
                     title: "Usage",
-                    subtitle: "The main cards and charts on this page are for the active Hermes profile. When more than one profile is discovered on the same host, a separate panel shows total token consumption across all profiles."
+                    subtitle: "The main cards and charts show input/output tokens for the active Hermes profile. When more than one profile is discovered, the host-wide panel shows all-categories tokens across readable profiles."
                 ) {
                     HermesRefreshButton(isRefreshing: appState.isRefreshingUsage) {
                         Task { await appState.refreshUsage() }
@@ -150,43 +150,63 @@ struct UsageView: View {
     }
 
     private func activeProfileScopePanel(summary: UsageSummary) -> some View {
-        HermesSurfacePanel(
-            title: "Active Profile",
-            subtitle: "Everything below stays scoped to the currently selected Hermes profile."
-        ) {
-            HStack(alignment: .top, spacing: 12) {
-                HermesInsetSurface {
+        HermesSurfacePanel {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline, spacing: 18) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Profile")
-                            .font(.caption)
+                        Text("Active Profile")
+                            .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
 
                         Text(appState.activeConnection?.resolvedHermesProfileName ?? "default")
-                            .font(.headline)
+                            .font(.title3.weight(.semibold))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
                     }
-                }
-                .frame(maxWidth: .infinity)
 
-                HermesInsetSurface {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Current Total")
-                            .font(.caption)
+                    Spacer(minLength: 24)
+
+                    VStack(alignment: .trailing, spacing: 6) {
+                        Text("Input + Output")
+                            .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
 
                         Text(UsageNumberFormatter.string(for: summary.totalTokens))
-                            .font(.headline)
+                            .font(.title3.weight(.semibold))
                             .monospacedDigit()
                     }
                 }
-                .frame(maxWidth: .infinity)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Active Profile")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        Text(appState.activeConnection?.resolvedHermesProfileName ?? "default")
+                            .font(.title3.weight(.semibold))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Input + Output")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        Text(UsageNumberFormatter.string(for: summary.totalTokens))
+                            .font(.title3.weight(.semibold))
+                            .monospacedDigit()
+                    }
+                }
             }
         }
     }
 
     private func profileBreakdownPanel(_ breakdown: UsageProfileBreakdown) -> some View {
         HermesSurfacePanel(
-            title: "All Profiles Total Tokens",
-            subtitle: "This panel is host-wide. It combines total token consumption across all readable Hermes profiles on the active host, including input, output, cache, and reasoning. The other cards on this page remain scoped to the active profile."
+            title: "All Profiles Token Breakdown",
+            subtitle: "Host-wide all-categories view. It adds input, output, cache, and reasoning tokens across readable profiles; active-profile cards stay input/output focused."
         ) {
             if breakdown.chartProfiles.count < 2 {
                 ContentUnavailableView(
@@ -275,7 +295,7 @@ struct UsageView: View {
                 .frame(maxWidth: .infinity)
 
                 UsageMiniStat(
-                    title: "Host-wide Total",
+                    title: "Host-wide All Categories",
                     valueText: UsageNumberFormatter.string(for: breakdown.hostWideAllTokenCategoriesTotal),
                     tint: .primary
                 )
@@ -297,7 +317,7 @@ struct UsageView: View {
                 )
 
                 UsageMiniStat(
-                    title: "Host-wide Total",
+                    title: "Host-wide All Categories",
                     valueText: UsageNumberFormatter.string(for: breakdown.hostWideAllTokenCategoriesTotal),
                     tint: .primary
                 )
@@ -324,8 +344,8 @@ struct UsageView: View {
 
     private func usageHighlightsPanel(summary: UsageSummary) -> some View {
         HermesSurfacePanel(
-            title: "Active Profile Totals",
-            subtitle: "A compact summary of stored session usage for the currently selected Hermes profile."
+            title: "Active Profile Input/Output",
+            subtitle: "A compact summary of stored input and output tokens for the currently selected Hermes profile."
         ) {
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: 12) {
@@ -337,7 +357,7 @@ struct UsageView: View {
                     .frame(maxWidth: .infinity)
 
                     UsageMiniStat(
-                        title: "Total Tokens",
+                        title: "Input + Output",
                         valueText: UsageNumberFormatter.string(for: summary.totalTokens),
                         tint: .primary
                     )
@@ -359,7 +379,7 @@ struct UsageView: View {
                     )
 
                     UsageMiniStat(
-                        title: "Total Tokens",
+                        title: "Input + Output",
                         valueText: UsageNumberFormatter.string(for: summary.totalTokens),
                         tint: .primary
                     )
@@ -427,8 +447,8 @@ struct UsageView: View {
 
     private func topSessionsPanel(summary: UsageSummary) -> some View {
         HermesSurfacePanel(
-            title: "Top 5 Sessions by Tokens",
-            subtitle: "The stored sessions with the highest combined token consumption."
+            title: "Top 5 Sessions by Input/Output",
+            subtitle: "The stored sessions with the highest combined input and output tokens."
         ) {
             if summary.topSessions.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
@@ -461,7 +481,7 @@ struct UsageView: View {
 
     private func topModelsPanel(summary: UsageSummary) -> some View {
         HermesSurfacePanel(
-            title: "Top 5 Models by Tokens",
+            title: "Top 5 Models by Input/Output",
             subtitle: "Ranked by input/output tokens. Cache and reasoning stay secondary."
         ) {
             if summary.topModels.isEmpty {
@@ -496,7 +516,7 @@ struct UsageView: View {
     private func recentSessionsChartPanel(summary: UsageSummary) -> some View {
         HermesSurfacePanel(
             title: "Recent Session History",
-            subtitle: "The last 100 stored sessions, shown as token consumption over time."
+            subtitle: "The last 100 stored sessions, shown as input/output tokens over time."
         ) {
             if summary.recentSessions.isEmpty {
                 ContentUnavailableView(
@@ -511,13 +531,13 @@ struct UsageView: View {
                 Chart(Array(summary.recentSessions.enumerated()), id: \.element.id) { index, session in
                     BarMark(
                         x: .value("Session", index + 1),
-                        y: .value("Tokens", session.totalTokens)
+                        y: .value(L10n.string("Input + Output"), session.totalTokens)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
                     .foregroundStyle(color(for: session.totalTokens, maxTokens: maxTokens))
                     .accessibilityLabel(session.title ?? session.id)
                     .accessibilityValue(L10n.string(
-                        "%@ total tokens",
+                        "%@ input/output tokens",
                         UsageNumberFormatter.string(for: session.totalTokens)
                     ))
                 }
@@ -550,7 +570,7 @@ struct UsageView: View {
                     }
                 }
                 .chartXAxisLabel(L10n.string("Recent sessions"), position: .bottom, alignment: .center)
-                .chartYAxisLabel(L10n.string("Tokens"), position: .leading)
+                .chartYAxisLabel(L10n.string("Input + Output"), position: .leading)
                 .chartLegend(.hidden)
                 .frame(height: 260)
 
@@ -671,7 +691,7 @@ private struct UsageProfileDonutChart: View {
     var body: some View {
         Chart(Array(breakdown.chartProfiles.enumerated()), id: \.element.id) { index, profile in
             SectorMark(
-                angle: .value(L10n.string("All Tokens"), profile.allTokenCategoriesTotal),
+                angle: .value(L10n.string("All Categories"), profile.allTokenCategoriesTotal),
                 innerRadius: .ratio(0.62),
                 angularInset: 2
             )
@@ -679,7 +699,7 @@ private struct UsageProfileDonutChart: View {
             .foregroundStyle(colors[index % colors.count])
             .accessibilityLabel(profile.profileName)
             .accessibilityValue(L10n.string(
-                "%@ total tokens",
+                "%@ all-category tokens",
                 UsageNumberFormatter.string(for: profile.allTokenCategoriesTotal)
             ))
         }
@@ -696,7 +716,7 @@ private struct UsageProfileDonutChart: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
 
-                Text(L10n.string("all profiles total"))
+                Text(L10n.string("all categories"))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -742,6 +762,10 @@ private struct UsageProfileLegendRow: View {
                     .font(.headline)
                     .monospacedDigit()
 
+                Text(L10n.string("all categories"))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
                 Text(UsageNumberFormatter.percentString(for: total > 0 ? Double(profile.allTokenCategoriesTotal) / Double(total) : 0))
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -762,8 +786,7 @@ private struct UsageProfileLegendRow: View {
 
     private var profileBreakdownLine: String {
         [
-            L10n.string("Input %@", UsageNumberFormatter.shortString(for: profile.inputTokens)),
-            L10n.string("Output %@", UsageNumberFormatter.shortString(for: profile.outputTokens)),
+            L10n.string("Input/output %@", UsageNumberFormatter.shortString(for: profile.inputOutputTokensTotal)),
             L10n.string("Cache %@", UsageNumberFormatter.shortString(for: profile.cacheTokensTotal)),
             L10n.string("Reasoning %@", UsageNumberFormatter.shortString(for: profile.reasoningTokens))
         ].joined(separator: " · ")

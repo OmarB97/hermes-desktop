@@ -83,6 +83,14 @@ struct ConnectionProfile: Codable, Identifiable, Equatable, Hashable {
         "\(remoteHermesHomePath)/cron/jobs.json"
     }
 
+    var remoteKanbanHomePath: String {
+        "~/.hermes"
+    }
+
+    var remoteKanbanDatabasePath: String {
+        "\(remoteKanbanHomePath)/kanban.db"
+    }
+
     func remotePath(for trackedFile: RemoteTrackedFile) -> String {
         "\(remoteHermesHomePath)/\(trackedFile.relativePathFromHermesHome)"
     }

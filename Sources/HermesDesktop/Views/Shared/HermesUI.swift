@@ -165,17 +165,71 @@ struct HermesRefreshButton: View {
 struct HermesBadge: View {
     let text: String
     let tint: Color
+    var systemImage: String?
+    var prominence: BadgeProminence = .subtle
     var isMonospaced = false
 
     var body: some View {
-        Text(L10n.string(text))
-            .font(isMonospaced ? .system(.caption, design: .monospaced).weight(.semibold) : .caption.weight(.semibold))
-            .foregroundStyle(tint)
-            .lineLimit(1)
-            .fixedSize(horizontal: true, vertical: true)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 4)
-            .background(tint.opacity(0.12), in: Capsule())
+        HStack(spacing: 4) {
+            if let systemImage {
+                Image(systemName: systemImage)
+                    .font(.caption2.weight(.bold))
+            }
+
+            Text(L10n.string(text))
+                .font(isMonospaced ? .system(.caption, design: .monospaced).weight(.semibold) : .caption.weight(.semibold))
+        }
+        .foregroundStyle(foregroundStyle)
+        .lineLimit(1)
+        .fixedSize(horizontal: true, vertical: true)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4)
+        .background(backgroundStyle, in: Capsule())
+        .overlay {
+            Capsule()
+                .strokeBorder(borderStyle, lineWidth: prominence.borderWidth)
+        }
+    }
+
+    enum BadgeProminence {
+        case subtle
+        case strong
+
+        var borderWidth: CGFloat {
+            switch self {
+            case .subtle:
+                return 0
+            case .strong:
+                return 1
+            }
+        }
+    }
+
+    private var foregroundStyle: Color {
+        switch prominence {
+        case .subtle:
+            return tint
+        case .strong:
+            return .white
+        }
+    }
+
+    private var backgroundStyle: Color {
+        switch prominence {
+        case .subtle:
+            return tint.opacity(0.12)
+        case .strong:
+            return tint.opacity(0.86)
+        }
+    }
+
+    private var borderStyle: Color {
+        switch prominence {
+        case .subtle:
+            return .clear
+        case .strong:
+            return Color.white.opacity(0.18)
+        }
     }
 }
 
@@ -483,4 +537,105 @@ struct HermesPersistentHSplitView<Primary: View, Detail: View>: NSViewRepresenta
             return min(max(width, layout.wrappedValue.minPrimaryWidth), maxWidth)
         }
     }
+}
+
+struct HermesWrappingFlowLayout: Layout {
+    let horizontalSpacing: CGFloat
+    let verticalSpacing: CGFloat
+
+    init(horizontalSpacing: CGFloat = 8, verticalSpacing: CGFloat = 8) {
+        self.horizontalSpacing = horizontalSpacing
+        self.verticalSpacing = verticalSpacing
+    }
+
+    func sizeThatFits(
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout Void
+    ) -> CGSize {
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        let lines = computeLines(for: sizes, maxWidth: proposal.width)
+        let height = lines.reduce(CGFloat.zero) { partial, line in
+            partial + line.height
+        } + verticalSpacing * CGFloat(max(0, lines.count - 1))
+        let width = proposal.width ?? lines.map(\.width).max() ?? 0
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout Void
+    ) {
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        let lines = computeLines(for: sizes, maxWidth: bounds.width)
+        var currentY = bounds.minY
+
+        for line in lines {
+            var currentX = bounds.minX
+            for item in line.items {
+                let size = sizes[item.index]
+                subviews[item.index].place(
+                    at: CGPoint(x: currentX, y: currentY),
+                    proposal: ProposedViewSize(width: size.width, height: size.height)
+                )
+                currentX += size.width + horizontalSpacing
+            }
+            currentY += line.height + verticalSpacing
+        }
+    }
+
+    private func computeLines(for sizes: [CGSize], maxWidth: CGFloat?) -> [HermesFlowLine] {
+        let availableWidth = maxWidth ?? .greatestFiniteMagnitude
+        guard !sizes.isEmpty else { return [] }
+
+        var lines: [HermesFlowLine] = []
+        var currentItems: [HermesFlowLineItem] = []
+        var currentWidth: CGFloat = 0
+        var currentHeight: CGFloat = 0
+
+        for (index, size) in sizes.enumerated() {
+            let proposedWidth = currentItems.isEmpty ? size.width : currentWidth + horizontalSpacing + size.width
+
+            if !currentItems.isEmpty && proposedWidth > availableWidth {
+                lines.append(
+                    HermesFlowLine(
+                        items: currentItems,
+                        width: currentWidth,
+                        height: currentHeight
+                    )
+                )
+                currentItems = [HermesFlowLineItem(index: index)]
+                currentWidth = size.width
+                currentHeight = size.height
+            } else {
+                currentItems.append(HermesFlowLineItem(index: index))
+                currentWidth = proposedWidth
+                currentHeight = max(currentHeight, size.height)
+            }
+        }
+
+        if !currentItems.isEmpty {
+            lines.append(
+                HermesFlowLine(
+                    items: currentItems,
+                    width: currentWidth,
+                    height: currentHeight
+                )
+            )
+        }
+
+        return lines
+    }
+}
+
+private struct HermesFlowLine {
+    let items: [HermesFlowLineItem]
+    let width: CGFloat
+    let height: CGFloat
+}
+
+private struct HermesFlowLineItem {
+    let index: Int
 }

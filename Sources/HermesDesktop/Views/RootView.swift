@@ -4,6 +4,7 @@ struct RootView: View {
     @EnvironmentObject private var appState: AppState
     @State private var sessionsSplitLayout = HermesSplitLayout(minPrimaryWidth: 300, defaultPrimaryWidth: 340)
     @State private var cronJobsSplitLayout = HermesSplitLayout(minPrimaryWidth: 300, defaultPrimaryWidth: 360)
+    @State private var kanbanSplitLayout = HermesSplitLayout(minPrimaryWidth: 520, defaultPrimaryWidth: 680, maxPrimaryWidth: 980)
     @State private var filesSplitLayout = HermesSplitLayout(minPrimaryWidth: 300, defaultPrimaryWidth: 360)
     @State private var skillsSplitLayout = HermesSplitLayout(minPrimaryWidth: 300, defaultPrimaryWidth: 340)
 
@@ -63,7 +64,7 @@ struct RootView: View {
         if appState.activeConnection == nil {
             return [.connections]
         }
-        return [.connections, .overview, .sessions, .cronjobs, .files, .usage, .skills, .terminal]
+        return [.connections, .overview, .sessions, .cronjobs, .kanban, .files, .usage, .skills, .terminal]
     }
 
     private var sectionSelection: Binding<AppSection?> {
@@ -94,6 +95,8 @@ struct RootView: View {
             SessionsView(splitLayout: $sessionsSplitLayout)
         case .cronjobs:
             CronJobsView(splitLayout: $cronJobsSplitLayout)
+        case .kanban:
+            KanbanView(splitLayout: $kanbanSplitLayout)
         case .usage:
             UsageView()
         case .skills:

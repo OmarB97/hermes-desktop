@@ -93,6 +93,8 @@ struct OverviewView: View {
                 sessionHistoryPanel(overview)
                     .frame(minWidth: 420, maxWidth: .infinity)
             }
+
+            kanbanPanel(overview)
         }
     }
 
@@ -101,6 +103,7 @@ struct OverviewView: View {
             currentHostPanel(activeConnection)
             workspacePanel(overview)
             statusPanel(for: overview)
+            kanbanPanel(overview)
             workspaceFilesPanel(overview)
             sessionHistoryPanel(overview)
         }
@@ -271,6 +274,13 @@ struct OverviewView: View {
                     value: overview.paths.cronJobs,
                     isReady: overview.exists.cronJobs
                 )
+
+                OverviewPathRow(
+                    title: "Kanban board",
+                    badge: "Kanban",
+                    value: overview.paths.kanbanDatabase ?? "~/.hermes/kanban.db",
+                    isReady: overview.exists.kanbanDatabase ?? false
+                )
             }
         }
     }
@@ -358,6 +368,71 @@ struct OverviewView: View {
         }
     }
 
+    private func kanbanPanel(_ overview: RemoteDiscovery) -> some View {
+        OverviewPanel(
+            title: "Kanban Board",
+            subtitle: "Host-wide coordination state shared by Hermes profiles on this SSH target."
+        ) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .center, spacing: 12) {
+                    Image(systemName: "rectangle.3.group")
+                        .font(.title3)
+                        .foregroundStyle(overview.kanban?.exists == true ? Color.accentColor : .secondary)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(L10n.string(overview.kanban?.exists == true ? "Kanban database detected" : "Kanban database not initialized"))
+                            .font(.headline)
+
+                        Text(L10n.string("Desktop reads and updates this board over SSH without using the web dashboard API."))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 12)
+
+                    OverviewBadge(text: "Host-wide", tint: .accentColor)
+                }
+
+                OverviewDetailBlock(
+                    label: "Database path",
+                    value: overview.kanban?.databasePath ?? overview.paths.kanbanDatabase ?? "~/.hermes/kanban.db",
+                    isMonospaced: true,
+                    emphasizeValue: true
+                )
+
+                HStack(spacing: 10) {
+                    OverviewBadge(
+                        text: overview.kanban?.hasHermesCLI == true ? "CLI ready" : "CLI missing",
+                        tint: overview.kanban?.hasHermesCLI == true ? .green : .orange
+                    )
+
+                    OverviewBadge(
+                        text: overview.kanban?.hasKanbanModule == true ? "Module ready" : "Module fallback",
+                        tint: overview.kanban?.hasKanbanModule == true ? .green : .secondary
+                    )
+
+                    if let dispatcher = overview.kanban?.dispatcher,
+                       let running = dispatcher.running {
+                        OverviewBadge(
+                            text: running ? "Dispatcher active" : "Dispatcher inactive",
+                            tint: running ? .green : .orange
+                        )
+                    }
+                }
+
+                if overview.kanban?.dispatcher?.isKnownInactive == true,
+                   let message = overview.kanban?.dispatcher?.message {
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
     private func makeStatusItems(for overview: RemoteDiscovery) -> [OverviewStatusItem] {
         [
             OverviewStatusItem(
@@ -374,6 +449,11 @@ struct OverviewView: View {
                 id: "sessions",
                 title: "Sessions/Usage source",
                 isReady: overview.sessionStore != nil || overview.exists.sessionsDir
+            ),
+            OverviewStatusItem(
+                id: "kanban",
+                title: "Host-wide Kanban board",
+                isReady: overview.kanban?.exists == true || overview.kanban?.hasHermesCLI == true || overview.kanban?.hasKanbanModule == true
             )
         ]
     }
