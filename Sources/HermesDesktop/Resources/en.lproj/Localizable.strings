@@ -334,6 +334,7 @@
 "Related skills" = "Related skills";
 "Relative path" = "Relative path";
 "Remaining runs" = "Remaining runs";
+"Reply…" = "Reply…";
 "Resume" = "Resume";
 "Root" = "Root";
 "Run At" = "Run At";
@@ -351,6 +352,7 @@
 "Source" = "Source";
 "Started" = "Started";
 "Started %@" = "Started %@";
+"Start…" = "Start…";
 "All Sessions (%@)" = "All Sessions (%@)";
 "Cron Jobs (%@)" = "Cron Jobs (%@)";
 "Cron Jobs (%@ of %@)" = "Cron Jobs (%@ of %@)";
@@ -535,6 +537,8 @@
 "Agent is working" = "Agent is working";
 "Create a Kanban task" = "Create a Kanban task";
 "Nudge the remote Kanban dispatcher once" = "Nudge the remote Kanban dispatcher once";
+"Search tasks" = "Search tasks";
+"Archived" = "Archived";
 "All assignees" = "All assignees";
 "All tenants" = "All tenants";
 "No host-wide Kanban database exists at %@. Create the first task to initialize it on the remote host." = "No host-wide Kanban database exists at %@. Create the first task to initialize it on the remote host.";

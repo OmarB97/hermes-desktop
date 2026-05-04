@@ -581,6 +581,7 @@ struct HermesPersistentHSplitView<Primary: View, Detail: View>: NSViewRepresenta
         var detailMinWidth: CGFloat = 420
         private var isRestoringDivider = false
         private var hasRestoredDivider = false
+        private var autoConstrainedPrimaryWidth: CGFloat?
 
         func restoreDividerPosition(in splitView: NSSplitView) {
             guard splitView.subviews.count > 1, let layout else { return }
@@ -619,6 +620,10 @@ struct HermesPersistentHSplitView<Primary: View, Detail: View>: NSViewRepresenta
                 return
             }
 
+            if reconcilePrimaryWidthForAvailableSpace(in: splitView) {
+                return
+            }
+
             let width = splitView.subviews[0].frame.width
             guard width.isFinite, width > 0 else { return }
 
@@ -627,6 +632,7 @@ struct HermesPersistentHSplitView<Primary: View, Detail: View>: NSViewRepresenta
             if updatedLayout != layout.wrappedValue {
                 layout.wrappedValue = updatedLayout
             }
+            autoConstrainedPrimaryWidth = nil
         }
 
         func splitView(
@@ -661,6 +667,58 @@ struct HermesPersistentHSplitView<Primary: View, Detail: View>: NSViewRepresenta
 
             let maxWidth = max(lowerBound, upperBound)
             return min(max(width, lowerBound), maxWidth)
+        }
+
+        private func reconcilePrimaryWidthForAvailableSpace(in splitView: NSSplitView) -> Bool {
+            guard splitView.subviews.count > 1, let layout else { return false }
+
+            let currentPrimaryWidth = splitView.subviews[0].frame.width
+            let currentDetailWidth = splitView.subviews[1].frame.width
+            let shouldProtectDetail = currentDetailWidth + 1 < detailMinWidth
+
+            if let autoConstrainedPrimaryWidth,
+               !shouldProtectDetail,
+               abs(currentPrimaryWidth - autoConstrainedPrimaryWidth) > 2 {
+                self.autoConstrainedPrimaryWidth = nil
+                return false
+            }
+
+            let preferredPrimaryWidth = constrainedPrimaryWidth(
+                layout.wrappedValue.preferredPrimaryWidth,
+                in: splitView
+            )
+
+            let shouldRestorePrimary = autoConstrainedPrimaryWidth != nil &&
+                currentPrimaryWidth + 1 < preferredPrimaryWidth
+
+            guard shouldProtectDetail || shouldRestorePrimary else {
+                return false
+            }
+
+            let targetPrimaryWidth = shouldProtectDetail
+                ? min(currentPrimaryWidth, preferredPrimaryWidth)
+                : preferredPrimaryWidth
+
+            guard abs(currentPrimaryWidth - targetPrimaryWidth) > 1 else {
+                if shouldProtectDetail {
+                    autoConstrainedPrimaryWidth = currentPrimaryWidth
+                    return true
+                }
+                return false
+            }
+
+            isRestoringDivider = true
+            splitView.setPosition(targetPrimaryWidth, ofDividerAt: 0)
+            splitView.adjustSubviews()
+            isRestoringDivider = false
+
+            if abs(targetPrimaryWidth - layout.wrappedValue.preferredPrimaryWidth) < 1 {
+                autoConstrainedPrimaryWidth = nil
+            } else {
+                autoConstrainedPrimaryWidth = targetPrimaryWidth
+            }
+
+            return true
         }
 
         private func effectivePrimaryMinimum(in splitView: NSSplitView) -> CGFloat? {

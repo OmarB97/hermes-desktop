@@ -388,11 +388,14 @@ private struct SessionComposerPanel: View {
     @State private var isExpanded = false
     @FocusState private var isEditorFocused: Bool
 
-    private let compactPromptHeight: CGFloat = 24
-    private let compactPromptLeadingInset: CGFloat = 5
+    private let compactPromptHeight: CGFloat = 28
+    private let compactPromptLeadingInset: CGFloat = 8
+    private let compactPromptTopInset: CGFloat = 3
     private let expandedPromptHeight: CGFloat = 96
     private let expandedPromptHorizontalInset: CGFloat = 12
     private let expandedPromptTopInset: CGFloat = 10
+    private let expandedEditorCharacterThreshold = 140
+    private let expandedEditorLongTokenThreshold = 52
 
     private var trimmedDraft: String {
         draft.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -403,7 +406,11 @@ private struct SessionComposerPanel: View {
     }
 
     private var shouldUseExpandedEditor: Bool {
-        isExpanded || draft.contains("\n") || draft.count > 96
+        isExpanded || shouldExpandEditor(for: draft)
+    }
+
+    private var compactPlaceholder: String {
+        title == "New Session" ? L10n.string("Start…") : L10n.string("Reply…")
     }
 
     var body: some View {
@@ -459,68 +466,84 @@ private struct SessionComposerPanel: View {
 
     @ViewBuilder
     private var composerInput: some View {
-        if shouldUseExpandedEditor {
-            VStack(alignment: .leading, spacing: 10) {
-                promptEditor(
-                    height: expandedPromptHeight,
-                    placeholderPadding: EdgeInsets(
-                        top: expandedPromptTopInset,
-                        leading: expandedPromptHorizontalInset,
-                        bottom: 0,
-                        trailing: expandedPromptHorizontalInset
-                    ),
-                    editorPadding: EdgeInsets(
-                        top: expandedPromptTopInset - 5,
-                        leading: expandedPromptHorizontalInset - 5,
-                        bottom: 0,
-                        trailing: expandedPromptHorizontalInset - 5
-                    ),
-                    showsEditorBackground: true
-                )
-                    .frame(height: 108)
+        let usesExpandedEditor = shouldUseExpandedEditor
 
+        VStack(alignment: .leading, spacing: usesExpandedEditor ? 10 : 0) {
+            HStack(alignment: .center, spacing: 10) {
+                promptEditor(
+                    placeholderText: usesExpandedEditor ? L10n.string(placeholder) : compactPlaceholder,
+                    height: usesExpandedEditor ? expandedPromptHeight : compactPromptHeight,
+                    placeholderPadding: usesExpandedEditor
+                        ? EdgeInsets(
+                            top: expandedPromptTopInset,
+                            leading: expandedPromptHorizontalInset,
+                            bottom: 0,
+                            trailing: expandedPromptHorizontalInset
+                        )
+                        : EdgeInsets(
+                            top: compactPromptTopInset,
+                            leading: compactPromptLeadingInset,
+                            bottom: 0,
+                            trailing: 0
+                        ),
+                    editorPadding: usesExpandedEditor
+                        ? EdgeInsets(
+                            top: expandedPromptTopInset - 5,
+                            leading: expandedPromptHorizontalInset - 5,
+                            bottom: 0,
+                            trailing: expandedPromptHorizontalInset - 5
+                        )
+                        : EdgeInsets(
+                            top: compactPromptTopInset - 5,
+                            leading: compactPromptLeadingInset - 5,
+                            bottom: 0,
+                            trailing: 0
+                        ),
+                    showsEditorBackground: usesExpandedEditor
+                )
+                .frame(minWidth: 80)
+                .frame(height: usesExpandedEditor ? 108 : compactPromptHeight)
+
+                if !usesExpandedEditor {
+                    controlCluster
+                }
+            }
+            .padding(.leading, usesExpandedEditor ? 0 : 12)
+            .padding(.trailing, usesExpandedEditor ? 0 : 8)
+            .frame(height: usesExpandedEditor ? nil : 46)
+            .background {
+                if !usesExpandedEditor {
+                    RoundedRectangle(cornerRadius: 13, style: .continuous)
+                        .fill(Color.secondary.opacity(0.08))
+                }
+            }
+            .overlay {
+                if !usesExpandedEditor {
+                    RoundedRectangle(cornerRadius: 13, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if !usesExpandedEditor {
+                    expandEditor()
+                }
+            }
+
+            if usesExpandedEditor {
                 HStack {
                     Spacer(minLength: 8)
                     controlCluster
                 }
             }
-        } else {
-            HStack(alignment: .center, spacing: 10) {
-                promptEditor(
-                    height: compactPromptHeight,
-                    placeholderPadding: EdgeInsets(
-                        top: 0,
-                        leading: compactPromptLeadingInset,
-                        bottom: 0,
-                        trailing: 0
-                    ),
-                    editorPadding: EdgeInsets(
-                        top: 0,
-                        leading: compactPromptLeadingInset - 5,
-                        bottom: 0,
-                        trailing: 0
-                    ),
-                    showsEditorBackground: false
-                )
-                    .frame(minWidth: 80)
-
-                controlCluster
-            }
-            .padding(.leading, 12)
-            .padding(.trailing, 8)
-            .frame(height: 42)
-            .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
-            }
-            .onTapGesture {
-                expandEditor()
-            }
+        }
+        .onChange(of: shouldUseExpandedEditor) { _, _ in
+            preserveEditorFocusAfterLayoutChange()
         }
     }
 
     private func promptEditor(
+        placeholderText: String,
         height: CGFloat,
         placeholderPadding: EdgeInsets,
         editorPadding: EdgeInsets,
@@ -533,7 +556,7 @@ private struct SessionComposerPanel: View {
             }
 
             if draft.isEmpty {
-                Text(L10n.string(placeholder))
+                Text(placeholderText)
                     .font(.body)
                     .foregroundStyle(.tertiary)
                     .padding(placeholderPadding)
@@ -568,12 +591,10 @@ private struct SessionComposerPanel: View {
 
     private var controlCluster: some View {
         HStack(spacing: 8) {
-            Toggle(isOn: $autoApproveCommands) {
-                Label(L10n.string("Auto-approve commands"), systemImage: "checkmark.shield")
+            ViewThatFits(in: .horizontal) {
+                autoApproveToggle
+                compactAutoApproveToggle
             }
-            .toggleStyle(.checkbox)
-            .disabled(isSending)
-            .help(L10n.string("Runs this turn with Hermes command approval bypassed."))
 
             Button {
                 submit()
@@ -598,6 +619,27 @@ private struct SessionComposerPanel: View {
             .help(L10n.string("Send with Command-Return"))
             .accessibilityLabel(L10n.string("Send"))
         }
+    }
+
+    private var autoApproveToggle: some View {
+        Toggle(isOn: $autoApproveCommands) {
+            Label(L10n.string("Auto-approve commands"), systemImage: "checkmark.shield")
+        }
+        .toggleStyle(.checkbox)
+        .disabled(isSending)
+        .help(L10n.string("Runs this turn with Hermes command approval bypassed."))
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var compactAutoApproveToggle: some View {
+        Toggle(isOn: $autoApproveCommands) {
+            Label(L10n.string("Auto-approve commands"), systemImage: "checkmark.shield")
+                .labelStyle(.iconOnly)
+        }
+        .toggleStyle(.checkbox)
+        .disabled(isSending)
+        .help(L10n.string("Runs this turn with Hermes command approval bypassed."))
+        .accessibilityLabel(L10n.string("Auto-approve commands"))
         .fixedSize(horizontal: true, vertical: false)
     }
 
@@ -614,7 +656,7 @@ private struct SessionComposerPanel: View {
             let didSend = await onSend(prompt, shouldAutoApprove)
             if !didSend && draft.isEmpty {
                 draft = prompt
-                isExpanded = prompt.contains("\n") || prompt.count > 96
+                isExpanded = shouldExpandEditor(for: prompt)
             }
         }
     }
@@ -625,6 +667,26 @@ private struct SessionComposerPanel: View {
         DispatchQueue.main.async {
             isEditorFocused = true
         }
+    }
+
+    private func preserveEditorFocusAfterLayoutChange() {
+        guard isEditorFocused, !isSending else { return }
+        DispatchQueue.main.async {
+            isEditorFocused = true
+        }
+    }
+
+    private func shouldExpandEditor(for text: String) -> Bool {
+        text.contains("\n") ||
+            text.count > expandedEditorCharacterThreshold ||
+            longestTokenLength(in: text) > expandedEditorLongTokenThreshold
+    }
+
+    private func longestTokenLength(in text: String) -> Int {
+        text
+            .split(whereSeparator: \.isWhitespace)
+            .map(\.count)
+            .max() ?? 0
     }
 }
 

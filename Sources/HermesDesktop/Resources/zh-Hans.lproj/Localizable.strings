@@ -331,6 +331,7 @@
 "Related skills" = "相关技能";
 "Relative path" = "相对路径";
 "Remaining runs" = "剩余运行次数";
+"Reply…" = "回复…";
 "Resume" = "恢复";
 "Root" = "根目录";
 "Run At" = "运行时间";
@@ -348,6 +349,7 @@
 "Source" = "来源";
 "Started" = "开始时间";
 "Started %@" = "开始 %@";
+"Start…" = "开始…";
 "All Sessions (%@)" = "全部会话（%@）";
 "Cron Jobs (%@)" = "定时任务（%@）";
 "Cron Jobs (%@ of %@)" = "定时任务（%@ / %@）";
@@ -531,6 +533,8 @@
 "Agent is working" = "Agent 正在工作";
 "Create a Kanban task" = "创建 Kanban 任务";
 "Nudge the remote Kanban dispatcher once" = "触发一次远端 Kanban 调度器";
+"Search tasks" = "搜索任务";
+"Archived" = "已归档";
 "All assignees" = "所有负责人";
 "All tenants" = "所有租户";
 "No host-wide Kanban database exists at %@. Create the first task to initialize it on the remote host." = "%@ 处没有主机范围的 Kanban 数据库。创建第一个任务即可在远端主机上初始化它。";

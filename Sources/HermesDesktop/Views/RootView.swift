@@ -4,7 +4,7 @@ struct RootView: View {
     @EnvironmentObject private var appState: AppState
     @State private var sessionsSplitLayout = HermesSplitLayout(minPrimaryWidth: 300, defaultPrimaryWidth: 340)
     @State private var cronJobsSplitLayout = HermesSplitLayout(minPrimaryWidth: 300, defaultPrimaryWidth: 360)
-    @State private var kanbanSplitLayout = HermesSplitLayout(minPrimaryWidth: 520, defaultPrimaryWidth: 680, maxPrimaryWidth: 980)
+    @State private var kanbanSplitLayout = HermesSplitLayout(minPrimaryWidth: 360, defaultPrimaryWidth: 620, maxPrimaryWidth: 900)
     @State private var filesSplitLayout = HermesSplitLayout(minPrimaryWidth: 300, defaultPrimaryWidth: 360)
     @State private var skillsSplitLayout = HermesSplitLayout(minPrimaryWidth: 300, defaultPrimaryWidth: 340)
 

@@ -61,8 +61,9 @@ native Kanban board and session workbench described below.
   Hermes profiles on the same host
 - the real remote state in one place: sessions, Kanban, workspace files, usage,
   skills, cron jobs, and terminal work
-- a session workbench for reading transcripts, pinning important sessions,
-  continuing a chat, and resuming the same session in Terminal
+- a session workbench for searching session metadata and message content,
+  reading transcripts, pinning important sessions, continuing a chat, and
+  resuming the same session in Terminal
 - a native Kanban board for the upstream host-wide `~/.hermes/kanban.db`
 - direct editing for canonical Hermes files, selected remote text files, and
   remote `SKILL.md` files, with conflict checks before save
@@ -283,10 +284,11 @@ surface area and workflow, not about creating a second source of truth.
   Lets you edit the canonical Hermes files and bookmark selected remote text
   files on the active host, with remote conflict checks before save.
 - `Sessions`
-  Reads the real remote session store from `~/.hermes/state.db`, with search,
-  pinned sessions, cleaner metadata, readable transcripts, compact tool-output
-  summaries, in-app chat continuation, terminal resume, refresh-on-entry
-  behavior, and remote deletion.
+  Reads the real remote session store from `~/.hermes/state.db`, with
+  full-text search across names, IDs, previews, and message content, match
+  snippets, pinned sessions, cleaner metadata, readable transcripts, compact
+  tool-output summaries, in-app chat continuation, terminal resume,
+  refresh-on-entry behavior, and remote deletion.
 - `Cron Jobs`
   Browses the real Hermes cron definitions on the host, with create, edit,
   pause, resume, run-now, and delete actions, plus the details that matter when
@@ -438,8 +440,9 @@ source of truth.
 
 - [x] a Files workspace for canonical Hermes files and user-bookmarked remote
   text files, with SSH-backed browsing, conflict-aware editing, and atomic saves
-- [x] native session workflows with cleaner metadata, search, deletion, and
-  refresh-on-entry behavior
+- [x] native session workflows with cleaner metadata, full-text session and
+  message-content search, match snippets, deletion, and refresh-on-entry
+  behavior
 - [x] a session workbench with pinned sessions, readable transcripts, compact
   tool-output summaries, in-app chat continuation, and terminal resume
 - [x] a native Kanban workspace for the upstream Hermes board, including task

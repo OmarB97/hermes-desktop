@@ -331,6 +331,7 @@
 "Related skills" = "Связанные навыки";
 "Relative path" = "Относительный путь";
 "Remaining runs" = "Оставшиеся запуски";
+"Reply…" = "Ответ…";
 "Resume" = "Возобновить";
 "Root" = "Корень";
 "Run At" = "Запустить в";
@@ -348,6 +349,7 @@
 "Source" = "Источник";
 "Started" = "Начато";
 "Started %@" = "Начато %@";
+"Start…" = "Начать…";
 "All Sessions (%@)" = "Все сеансы (%@)";
 "Cron Jobs (%@)" = "Cron-задания (%@)";
 "Cron Jobs (%@ of %@)" = "Cron-задания (%@ из %@)";
@@ -531,6 +533,8 @@
 "Agent is working" = "Агент работает";
 "Create a Kanban task" = "Создать Kanban-задачу";
 "Nudge the remote Kanban dispatcher once" = "Один раз запустить удаленный диспетчер Kanban";
+"Search tasks" = "Поиск задач";
+"Archived" = "Архив";
 "All assignees" = "Все исполнители";
 "All tenants" = "Все tenants";
 "No host-wide Kanban database exists at %@. Create the first task to initialize it on the remote host." = "По пути %@ нет Kanban-базы для всего хоста. Создайте первую задачу, чтобы инициализировать ее на удаленном хосте.";
