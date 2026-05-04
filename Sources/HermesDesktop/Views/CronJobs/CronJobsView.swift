@@ -73,7 +73,7 @@ struct CronJobsView: View {
 
     private var filterBar: some View {
         HStack(spacing: 10) {
-            Picker("Filter", selection: $filterMode) {
+            Picker(L10n.string("Filter"), selection: $filterMode) {
                 ForEach(CronFilterMode.allCases, id: \.self) { mode in
                     Text(L10n.string(mode.rawValue)).tag(mode)
                 }
@@ -81,14 +81,9 @@ struct CronJobsView: View {
             .pickerStyle(.segmented)
             .frame(width: 180)
 
-            Button {
+            HermesCreateActionButton("New Job", help: "Create a new cron job") {
                 startCreating()
-            } label: {
-                Label(L10n.string("New"), systemImage: "plus")
-                    .labelStyle(.iconOnly)
             }
-            .buttonStyle(.borderedProminent)
-            .help(L10n.string("Create a new cron job"))
             .disabled(appState.isSavingCronJobDraft || appState.isOperatingOnCronJob)
         }
         .fixedSize(horizontal: true, vertical: false)
@@ -446,7 +441,7 @@ private struct CronJobDetailView: View {
                         subtitle: "Payload Hermes will run for this scheduled job."
                     ) {
                         HermesInsetSurface {
-                            Text(job.trimmedPrompt ?? "No prompt payload saved for this job.")
+                            Text(job.trimmedPrompt ?? L10n.string("No prompt payload saved for this job."))
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .textSelection(.enabled)
                         }
@@ -727,7 +722,7 @@ private struct CronJobEditorView: View {
         ) {
             VStack(alignment: .leading, spacing: 14) {
                 CronFormField(label: "Title") {
-                    TextField("Morning Briefing", text: $draft.name)
+                    TextField(L10n.string("Morning Briefing"), text: $draft.name)
                         .textFieldStyle(.roundedBorder)
                 }
 
@@ -756,7 +751,7 @@ private struct CronJobEditorView: View {
         ) {
             VStack(alignment: .leading, spacing: 14) {
                 CronFormField(label: "Frequency") {
-                    Picker("Frequency", selection: schedulePresetBinding) {
+                    Picker(L10n.string("Frequency"), selection: schedulePresetBinding) {
                         ForEach(CronSchedulePreset.allCases) { preset in
                             Text(L10n.string(preset.title)).tag(preset)
                         }
@@ -782,7 +777,7 @@ private struct CronJobEditorView: View {
 
                 if draft.schedule.preset == .weekly {
                     CronFormField(label: "Day") {
-                        Picker("Day", selection: scheduleWeekdayBinding) {
+                        Picker(L10n.string("Day"), selection: scheduleWeekdayBinding) {
                             ForEach(Array(CronScheduleFormatter.weekdayPickerLabels.enumerated()), id: \.offset) { index, label in
                                 Text(L10n.string(label)).tag(index)
                             }
@@ -802,7 +797,7 @@ private struct CronJobEditorView: View {
 
                 if showsTimezoneField {
                     CronFormField(label: "Timezone") {
-                        TextField("Europe/Rome, UTC, America/New_York", text: $draft.timezone)
+                        TextField(L10n.string("Europe/Rome, UTC, America/New_York"), text: $draft.timezone)
                             .textFieldStyle(.roundedBorder)
                     }
                 }
@@ -834,12 +829,12 @@ private struct CronJobEditorView: View {
         ) {
             VStack(alignment: .leading, spacing: 14) {
                 CronFormField(label: "Skills") {
-                    TextField("daily-robi, morning-briefing", text: $draft.skillsText)
+                    TextField(L10n.string("daily-robi, morning-briefing"), text: $draft.skillsText)
                         .textFieldStyle(.roundedBorder)
                 }
 
                 CronFormField(label: "Delivery") {
-                    Picker("Delivery", selection: deliveryPresetBinding) {
+                    Picker(L10n.string("Delivery"), selection: deliveryPresetBinding) {
                         ForEach(CronDeliveryPreset.allCases) { preset in
                             Text(L10n.string(preset.title)).tag(preset)
                         }
@@ -850,7 +845,7 @@ private struct CronJobEditorView: View {
 
                 if draft.deliveryPreset == .custom {
                     CronFormField(label: "Custom Target") {
-                        TextField("telegram:-1001234567890:17585", text: customDeliveryBinding)
+                        TextField(L10n.string("telegram:-1001234567890:17585"), text: customDeliveryBinding)
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
                     }
@@ -865,17 +860,17 @@ private struct CronJobEditorView: View {
                 }
 
                 CronFormField(label: "Model") {
-                    TextField("gpt-5.4-mini", text: $draft.model)
+                    TextField(L10n.string("gpt-5.4-mini"), text: $draft.model)
                         .textFieldStyle(.roundedBorder)
                 }
 
                 CronFormField(label: "Provider") {
-                    TextField("openai", text: $draft.provider)
+                    TextField(L10n.string("openai"), text: $draft.provider)
                         .textFieldStyle(.roundedBorder)
                 }
 
                 CronFormField(label: "Base URL") {
-                    TextField("https://api.openai.com/v1", text: $draft.baseURL)
+                    TextField(L10n.string("https://api.openai.com/v1"), text: $draft.baseURL)
                         .textFieldStyle(.roundedBorder)
                 }
             }
@@ -891,7 +886,7 @@ private struct CronJobEditorView: View {
             }
 
             CronFormField(label: "Unit") {
-                Picker("Unit", selection: scheduleIntervalUnitBinding) {
+                Picker(L10n.string("Unit"), selection: scheduleIntervalUnitBinding) {
                     ForEach(CronIntervalUnit.allCases) { unit in
                         Text(L10n.string(unit.title)).tag(unit)
                     }
@@ -905,7 +900,7 @@ private struct CronJobEditorView: View {
     private var dateTimeRow: some View {
         CronFormField(label: "Run At") {
             DatePicker(
-                "Run At",
+                L10n.string("Run At"),
                 selection: scheduleOneTimeDateBinding,
                 displayedComponents: [.date, .hourAndMinute]
             )
@@ -922,7 +917,7 @@ private struct CronJobEditorView: View {
             }
 
             CronFormField(label: "Unit") {
-                Picker("Unit", selection: scheduleIntervalUnitBinding) {
+                Picker(L10n.string("Unit"), selection: scheduleIntervalUnitBinding) {
                     ForEach(CronIntervalUnit.allCases) { unit in
                         Text(L10n.string(unit.title)).tag(unit)
                     }
@@ -935,7 +930,7 @@ private struct CronJobEditorView: View {
 
     private var hourlyRow: some View {
         CronFormField(label: "Minute") {
-            Picker("Minute", selection: scheduleMinuteBinding) {
+            Picker(L10n.string("Minute"), selection: scheduleMinuteBinding) {
                 ForEach(0..<60, id: \.self) { minute in
                     Text(String(format: "%02d", minute)).tag(minute)
                 }
@@ -948,7 +943,7 @@ private struct CronJobEditorView: View {
     private var timeRow: some View {
         HStack(alignment: .top, spacing: 12) {
             CronFormField(label: "Hour") {
-                Picker("Hour", selection: scheduleHourBinding) {
+                Picker(L10n.string("Hour"), selection: scheduleHourBinding) {
                     ForEach(0..<24, id: \.self) { hour in
                         Text(String(format: "%02d", hour)).tag(hour)
                     }
@@ -958,7 +953,7 @@ private struct CronJobEditorView: View {
             }
 
             CronFormField(label: "Minute") {
-                Picker("Minute", selection: scheduleMinuteBinding) {
+                Picker(L10n.string("Minute"), selection: scheduleMinuteBinding) {
                     ForEach(0..<60, id: \.self) { minute in
                         Text(String(format: "%02d", minute)).tag(minute)
                     }
@@ -971,7 +966,7 @@ private struct CronJobEditorView: View {
 
     private var customExpressionRow: some View {
         CronFormField(label: "Schedule") {
-            TextField("0 8 * * * or daily at 9am", text: customExpressionBinding)
+            TextField(L10n.string("0 8 * * * or daily at 9am"), text: customExpressionBinding)
                 .textFieldStyle(.roundedBorder)
                 .font(.system(.body, design: .monospaced))
         }

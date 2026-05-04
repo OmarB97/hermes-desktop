@@ -14,7 +14,21 @@ struct SkillsView: View {
                 HermesPageHeader(
                     title: "Skills",
                     subtitle: "Browse the Hermes skill library discovered on the active host."
-                )
+                ) {
+                    HStack(spacing: 10) {
+                        HermesRefreshButton(isRefreshing: appState.isRefreshingSkills) {
+                            Task { await appState.refreshSkills() }
+                        }
+                        .disabled(appState.isLoadingSkills || appState.isSavingSkillDraft)
+
+                        HermesExpandableSearchField(
+                            text: $searchText,
+                            prompt: L10n.string("Search skills"),
+                            expandedWidth: 220
+                        )
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
+                }
 
                 skillsToolbar
                 skillsContent
@@ -106,25 +120,14 @@ struct SkillsView: View {
     }
 
     private var skillsToolbar: some View {
-        HermesSearchActionBar(
-            text: $searchText,
-            prompt: "Search skills"
-        ) {
-            HStack(spacing: 10) {
-                Button {
-                    startCreating()
-                } label: {
-                    Label(L10n.string("New"), systemImage: "plus")
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(appState.isSavingSkillDraft)
-
-                HermesRefreshButton(isRefreshing: appState.isRefreshingSkills) {
-                    Task { await appState.refreshSkills() }
-                }
+        HStack(spacing: 10) {
+            HermesCreateActionButton("New Skill") {
+                startCreating()
             }
-            .disabled(appState.isLoadingSkills)
+            .disabled(appState.isSavingSkillDraft || appState.isLoadingSkills)
         }
+        .fixedSize(horizontal: true, vertical: false)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var panelTitle: String {

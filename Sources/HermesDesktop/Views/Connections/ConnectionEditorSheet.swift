@@ -40,19 +40,19 @@ struct ConnectionEditorSheet: View {
                     ) {
                         VStack(alignment: .leading, spacing: 14) {
                             EditorField(label: "Name") {
-                                TextField("Home Pi, Studio Mac, Prod VPS", text: $draft.label)
+                                TextField(L10n.string("Home Pi, Studio Mac, Prod VPS"), text: $draft.label)
                                     .focused($focusedField, equals: .label)
                                     .textFieldStyle(.roundedBorder)
                             }
 
                             EditorField(label: "SSH alias") {
-                                TextField("hermes-home", text: $draft.sshAlias)
+                                TextField(L10n.string("hermes-home"), text: $draft.sshAlias)
                                     .focused($focusedField, equals: .alias)
                                     .textFieldStyle(.roundedBorder)
                             }
 
                             EditorField(label: "Host or IP address") {
-                                TextField("mac-studio.local, 203.0.113.10, localhost", text: $draft.sshHost)
+                                TextField(L10n.string("mac-studio.local, 203.0.113.10, localhost"), text: $draft.sshHost)
                                     .focused($focusedField, equals: .host)
                                     .textFieldStyle(.roundedBorder)
                             }
@@ -88,7 +88,7 @@ struct ConnectionEditorSheet: View {
                             }
 
                             EditorField(label: "Hermes profile") {
-                                TextField("default or researcher", text: hermesProfileBinding)
+                                TextField(L10n.string("default or researcher"), text: hermesProfileBinding)
                                     .focused($focusedField, equals: .hermesProfile)
                                     .textFieldStyle(.roundedBorder)
                             }

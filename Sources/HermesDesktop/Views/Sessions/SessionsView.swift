@@ -220,13 +220,10 @@ struct SessionsView: View {
 
     private var sessionsToolbar: some View {
         HStack(spacing: 10) {
-            Button {
+            HermesCreateActionButton("New Chat") {
                 searchText = ""
                 appState.prepareNewSessionComposer()
-            } label: {
-                Label(L10n.string("New Chat"), systemImage: "plus")
             }
-            .buttonStyle(.bordered)
             .disabled(appState.isSendingSessionMessage)
         }
         .fixedSize(horizontal: true, vertical: false)

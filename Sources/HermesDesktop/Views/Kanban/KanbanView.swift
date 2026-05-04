@@ -94,16 +94,10 @@ struct KanbanView: View {
     }
 
     private var createTaskButton: some View {
-        Button {
+        HermesCreateActionButton("New Task", help: "Create a Kanban task") {
             taskDraft = KanbanTaskDraft()
             isCreatingTask = true
-        } label: {
-            Label(L10n.string("Create Task"), systemImage: "plus")
-                .labelStyle(.iconOnly)
         }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.small)
-        .help(L10n.string("Create a Kanban task"))
         .disabled(appState.isSavingKanbanTaskDraft || appState.isOperatingOnKanbanTask)
     }
 
@@ -806,13 +800,13 @@ private struct KanbanTaskEditorView: View {
                                 }
                             }
 
-                            Toggle("Start in triage", isOn: $draft.startsInTriage)
+                            Toggle(L10n.string("Start in triage"), isOn: $draft.startsInTriage)
                                 .toggleStyle(.checkbox)
                                 .padding(.top, 20)
                         }
 
                         KanbanFormField(label: "Skills") {
-                            TextField("deploy-check, release-notes", text: $draft.skillsText)
+                            TextField(L10n.string("deploy-check, release-notes"), text: $draft.skillsText)
                                 .textFieldStyle(.roundedBorder)
                         }
                     }
@@ -997,30 +991,34 @@ private struct KanbanTaskDetailView: View {
                 Task { await onUnblock(task.id) }
             }
             .buttonStyle(.borderedProminent)
+            .fixedSize(horizontal: true, vertical: false)
             .disabled(operationInFlight)
         }
 
         if task.canComplete {
             if task.status == .blocked {
-                Button(L10n.string("Complete...")) {
+                Button(L10n.string("Complete")) {
                     toggleAction(.complete)
                 }
                 .buttonStyle(.bordered)
+                .fixedSize(horizontal: true, vertical: false)
                 .disabled(operationInFlight)
             } else {
-                Button(L10n.string("Complete...")) {
+                Button(L10n.string("Complete")) {
                     toggleAction(.complete)
                 }
                 .buttonStyle(.borderedProminent)
+                .fixedSize(horizontal: true, vertical: false)
                 .disabled(operationInFlight)
             }
         }
 
         if task.canBlock {
-            Button(L10n.string("Block...")) {
+            Button(L10n.string("Block")) {
                 toggleAction(.block)
             }
             .buttonStyle(.bordered)
+            .fixedSize(horizontal: true, vertical: false)
             .disabled(operationInFlight)
         }
 
@@ -1028,12 +1026,14 @@ private struct KanbanTaskDetailView: View {
             showArchiveConfirmation = true
         }
         .buttonStyle(.bordered)
+        .fixedSize(horizontal: true, vertical: false)
         .disabled(operationInFlight || task.status == .archived)
 
         Button(L10n.string("Delete"), role: .destructive) {
             showDeleteConfirmation = true
         }
         .buttonStyle(.bordered)
+        .fixedSize(horizontal: true, vertical: false)
         .disabled(operationInFlight)
 
         if operationInFlight {
@@ -1048,10 +1048,10 @@ private struct KanbanTaskDetailView: View {
             subtitle: "Board metadata from the remote host."
         ) {
             LazyVGrid(columns: metadataColumns, alignment: .leading, spacing: 14) {
-                HermesLabeledValue(label: "Status", value: task.status.displayTitle, emphasizeValue: true)
-                HermesLabeledValue(label: "Assignee", value: task.assignee ?? "Unassigned", isMonospaced: task.assignee != nil)
+                HermesLabeledValue(label: "Status", value: L10n.string(task.status.displayTitle), emphasizeValue: true)
+                HermesLabeledValue(label: "Assignee", value: task.assignee ?? L10n.string("Unassigned"), isMonospaced: task.assignee != nil)
                 HermesLabeledValue(label: "Priority", value: "\(task.priority)", isMonospaced: true)
-                HermesLabeledValue(label: "Workspace", value: task.workspaceKind.displayTitle)
+                HermesLabeledValue(label: "Workspace", value: L10n.string(task.workspaceKind.displayTitle))
 
                 if let workspacePath = task.workspacePath {
                     HermesLabeledValue(label: "Workspace path", value: workspacePath, isMonospaced: true)

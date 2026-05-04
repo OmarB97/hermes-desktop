@@ -17,15 +17,9 @@ struct FilesView: View {
                 HermesPageHeader(
                     title: "Files",
                     subtitle: "Read and edit selected remote files over SSH."
-                ) {
-                    Button {
-                        showBrowserSheet = true
-                    } label: {
-                        Label(L10n.string("Add File"), systemImage: "plus")
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
+                )
 
+                filesToolbar
                 libraryPanel
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -84,6 +78,16 @@ struct FilesView: View {
         } message: {
             Text(L10n.string("The remote file stays untouched."))
         }
+    }
+
+    private var filesToolbar: some View {
+        HStack(spacing: 10) {
+            HermesCreateActionButton("Add File") {
+                showBrowserSheet = true
+            }
+        }
+        .fixedSize(horizontal: true, vertical: false)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var libraryPanel: some View {

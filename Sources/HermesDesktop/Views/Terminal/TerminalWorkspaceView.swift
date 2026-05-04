@@ -162,7 +162,7 @@ private struct TerminalTabChip: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.borderless)
-            .help("Close tab")
+            .help(L10n.string("Close tab"))
         }
         .padding(.horizontal, horizontalPadding)
         .padding(.vertical, verticalPadding)

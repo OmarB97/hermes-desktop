@@ -62,7 +62,7 @@ struct CronJob: Codable, Identifiable, Hashable, OptionalModelDisplayable {
 
     var previewPrompt: String {
         guard let trimmedPrompt else {
-            return "No saved prompt payload"
+            return L10n.string("No prompt payload saved for this job.")
         }
 
         let compact = trimmedPrompt.replacingOccurrences(of: "\n", with: " ")
@@ -291,11 +291,11 @@ enum CronIntervalUnit: String, CaseIterable, Identifiable {
     func displayLabel(for value: Int) -> String {
         switch self {
         case .minutes:
-            return value == 1 ? "minute" : "minutes"
+            return L10n.string(value == 1 ? "minute" : "minutes")
         case .hours:
-            return value == 1 ? "hour" : "hours"
+            return L10n.string(value == 1 ? "hour" : "hours")
         case .days:
-            return value == 1 ? "day" : "days"
+            return L10n.string(value == 1 ? "day" : "days")
         }
     }
 }
@@ -543,7 +543,7 @@ struct CronScheduleDraft: Hashable {
     }
 
     var summary: String {
-        guard let expression else { return "No schedule" }
+        guard let expression else { return L10n.string("No schedule") }
         return CronScheduleFormatter.humanReadableDescription(for: expression) ?? expression
     }
 }
@@ -706,15 +706,15 @@ enum CronScheduleFormatter {
         let trimmed = expression.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if let (value, unit) = oneTimeDelayComponents(from: trimmed) {
-            return "Once in \(value) \(unit.displayLabel(for: value))"
+            return L10n.string("Once in %@ %@", "\(value)", unit.displayLabel(for: value))
         }
 
         if let (value, unit) = intervalComponents(from: trimmed) {
-            return "Every \(value) \(unit.displayLabel(for: value))"
+            return L10n.string("Every %@ %@", "\(value)", unit.displayLabel(for: value))
         }
 
         if let date = date(from: trimmed) {
-            return "Once on \(DateFormatters.shortDateTimeFormatter().string(from: date))"
+            return L10n.string("Once on %@", DateFormatters.shortDateTimeFormatter().string(from: date))
         }
 
         let parts = trimmed.split(whereSeparator: \.isWhitespace).map(String.init)
@@ -728,7 +728,7 @@ enum CronScheduleFormatter {
 
         if hour == "*", month == "*", dayOfMonth == "*", dayOfWeek == "*",
            let minuteValue = Int(minute) {
-            return String(format: "Every hour at :%02d", minuteValue)
+            return L10n.string("Every hour at :%@", String(format: "%02d", minuteValue))
         }
 
         guard let time = formattedTime(hour: hour, minute: minute) else {
@@ -736,21 +736,21 @@ enum CronScheduleFormatter {
         }
 
         if dayOfMonth == "*", month == "*", dayOfWeek == "*" {
-            return "Every day at \(time)"
+            return L10n.string("Every day at %@", time)
         }
 
         if dayOfMonth == "*", month == "*", dayOfWeek == "1-5" {
-            return "Every weekday at \(time)"
+            return L10n.string("Every weekday at %@", time)
         }
 
         if dayOfMonth == "*", month == "*",
            let days = formattedWeekdays(dayOfWeek) {
-            return "Every \(days) at \(time)"
+            return L10n.string("Every %@ at %@", days, time)
         }
 
         if month == "*", dayOfWeek == "*",
            let day = Int(dayOfMonth) {
-            return "On day \(day) of every month at \(time)"
+            return L10n.string("On day %@ of every month at %@", "\(day)", time)
         }
 
         return nil
@@ -775,7 +775,7 @@ enum CronScheduleFormatter {
         let resolved = values.compactMap { weekdaySymbols[$0] }
         guard resolved.count == values.count else { return nil }
 
-        return resolved.joined(separator: ", ")
+        return resolved.map { L10n.string($0) }.joined(separator: ", ")
     }
 
     static func weekdayIndex(for rawValue: String) -> Int? {

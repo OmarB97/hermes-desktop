@@ -315,12 +315,12 @@ struct SkillEditorView: View {
         ) {
             VStack(alignment: .leading, spacing: 14) {
                 SkillFormField(label: "Skill Name") {
-                    TextField("Remote debugging, Deploy to VPS, Research notes", text: $draft.name)
+                    TextField(L10n.string("Remote debugging, Deploy to VPS, Research notes"), text: $draft.name)
                         .textFieldStyle(.roundedBorder)
                 }
 
                 SkillFormField(label: "Short Description") {
-                    TextField("When Hermes should use this skill and what it helps it do.", text: $draft.description, axis: .vertical)
+                    TextField(L10n.string("When Hermes should use this skill and what it helps it do."), text: $draft.description, axis: .vertical)
                         .textFieldStyle(.roundedBorder)
                         .lineLimit(2...3)
                 }
@@ -328,12 +328,12 @@ struct SkillEditorView: View {
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top, spacing: 14) {
                         SkillFormField(label: "Category Path") {
-                            TextField("Optional: agent-workflows, ssh/tools", text: $draft.categoryPath)
+                            TextField(L10n.string("Optional: agent-workflows, ssh/tools"), text: $draft.categoryPath)
                                 .textFieldStyle(.roundedBorder)
                         }
 
                         SkillFormField(label: "Folder Name") {
-                            TextField("deploy-to-vps", text: $draft.slug)
+                            TextField(L10n.string("deploy-to-vps"), text: $draft.slug)
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(.body, design: .monospaced))
                         }
@@ -341,12 +341,12 @@ struct SkillEditorView: View {
 
                     VStack(alignment: .leading, spacing: 14) {
                         SkillFormField(label: "Category Path") {
-                            TextField("Optional: agent-workflows, ssh/tools", text: $draft.categoryPath)
+                            TextField(L10n.string("Optional: agent-workflows, ssh/tools"), text: $draft.categoryPath)
                                 .textFieldStyle(.roundedBorder)
                         }
 
                         SkillFormField(label: "Folder Name") {
-                            TextField("deploy-to-vps", text: $draft.slug)
+                            TextField(L10n.string("deploy-to-vps"), text: $draft.slug)
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(.body, design: .monospaced))
                         }
@@ -354,7 +354,7 @@ struct SkillEditorView: View {
                 }
 
                 SkillFormField(label: "Version") {
-                    TextField("Optional: 1.0.0", text: $draft.version)
+                    TextField(L10n.string("Optional: 1.0.0"), text: $draft.version)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
                 }
@@ -381,12 +381,12 @@ struct SkillEditorView: View {
         ) {
             VStack(alignment: .leading, spacing: 14) {
                 SkillFormField(label: "Tags") {
-                    TextField("Comma-separated: ssh, deploy, troubleshooting", text: $draft.tagsText)
+                    TextField(L10n.string("Comma-separated: ssh, deploy, troubleshooting"), text: $draft.tagsText)
                         .textFieldStyle(.roundedBorder)
                 }
 
                 SkillFormField(label: "Related Skills") {
-                    TextField("Comma-separated slugs: playwright, security-best-practices", text: $draft.relatedSkillsText)
+                    TextField(L10n.string("Comma-separated slugs: playwright, security-best-practices"), text: $draft.relatedSkillsText)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
                 }
@@ -396,9 +396,9 @@ struct SkillEditorView: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
 
-                    Toggle("Create references/ for longer docs or domain notes", isOn: $draft.includeReferencesFolder)
-                    Toggle("Create scripts/ for deterministic helpers", isOn: $draft.includeScriptsFolder)
-                    Toggle("Create templates/ for reusable output files", isOn: $draft.includeTemplatesFolder)
+                    Toggle(L10n.string("Create references/ for longer docs or domain notes"), isOn: $draft.includeReferencesFolder)
+                    Toggle(L10n.string("Create scripts/ for deterministic helpers"), isOn: $draft.includeScriptsFolder)
+                    Toggle(L10n.string("Create templates/ for reusable output files"), isOn: $draft.includeTemplatesFolder)
                 }
             }
         }
@@ -455,9 +455,9 @@ struct SkillEditorView: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
 
-                    Toggle("Ensure references/ exists", isOn: $draft.includeReferencesFolder)
-                    Toggle("Ensure scripts/ exists", isOn: $draft.includeScriptsFolder)
-                    Toggle("Ensure templates/ exists", isOn: $draft.includeTemplatesFolder)
+                    Toggle(L10n.string("Ensure references/ exists"), isOn: $draft.includeReferencesFolder)
+                    Toggle(L10n.string("Ensure scripts/ exists"), isOn: $draft.includeScriptsFolder)
+                    Toggle(L10n.string("Ensure templates/ exists"), isOn: $draft.includeTemplatesFolder)
                 }
             }
         }

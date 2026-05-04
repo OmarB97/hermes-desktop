@@ -17,7 +17,10 @@ struct RootView: View {
         defaultPrimaryWidth: workbenchPrimaryColumnWidth
     )
     @State private var filesSplitLayout = HermesSplitLayout(minPrimaryWidth: 300, defaultPrimaryWidth: 360)
-    @State private var skillsSplitLayout = HermesSplitLayout(minPrimaryWidth: 300, defaultPrimaryWidth: 340)
+    @State private var skillsSplitLayout = HermesSplitLayout(
+        minPrimaryWidth: workbenchPrimaryColumnWidth,
+        defaultPrimaryWidth: workbenchPrimaryColumnWidth
+    )
 
     var body: some View {
         HSplitView {

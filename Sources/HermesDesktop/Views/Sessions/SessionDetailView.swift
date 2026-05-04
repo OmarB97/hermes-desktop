@@ -82,6 +82,7 @@ struct SessionDetailView: View {
 
     @State private var showDeleteConfirmation = false
     @State private var scrollRequest = SessionScrollRequest()
+    @State private var expandedMetadataMessageIDs: Set<String> = []
 
     private var latestMessageScrollKey: String {
         "\(messages.count):\(messages.last?.id ?? "none")"
@@ -102,6 +103,7 @@ struct SessionDetailView: View {
                     .padding(.vertical, 22)
                 }
                 .onChange(of: session?.id) { _, _ in
+                    expandedMetadataMessageIDs.removeAll()
                     requestScrollToLatest(proxy, reason: .sessionChanged)
                 }
                 .onChange(of: latestMessageScrollKey) { _, _ in
@@ -195,9 +197,11 @@ struct SessionDetailView: View {
             ) {
                 LazyVStack(alignment: .leading, spacing: 12) {
                     ForEach(messages) { message in
-                        MessageCard(message: message)
-                            .equatable()
-                            .id(sessionMessageScrollID(message))
+                        MessageCard(
+                            message: message,
+                            isShowingMetadata: metadataExpansionBinding(for: message.id)
+                        )
+                        .id(sessionMessageScrollID(message))
                     }
 
                     if let matchingPendingTurn {
@@ -227,6 +231,18 @@ struct SessionDetailView: View {
         .padding(.horizontal, 24)
         .padding(.vertical, 14)
         .background(.regularMaterial)
+    }
+
+    private func metadataExpansionBinding(for messageID: String) -> Binding<Bool> {
+        Binding {
+            expandedMetadataMessageIDs.contains(messageID)
+        } set: { isExpanded in
+            if isExpanded {
+                expandedMetadataMessageIDs.insert(messageID)
+            } else {
+                expandedMetadataMessageIDs.remove(messageID)
+            }
+        }
     }
 
     private func requestScrollToLatest(_ proxy: ScrollViewProxy, reason: SessionScrollReason) {
@@ -743,10 +759,6 @@ private struct SessionPromptTextView: NSViewRepresentable {
                     textView.window?.makeFirstResponder(textView)
                 }
             }
-        } else if window.firstResponder === textView {
-            DispatchQueue.main.async {
-                textView.window?.makeFirstResponder(nil)
-            }
         }
     }
 
@@ -768,6 +780,7 @@ private struct SessionPromptTextView: NSViewRepresentable {
 
         func textDidChange(_ notification: Notification) {
             guard let textView = notification.object as? PlaceholderCommandTextView else { return }
+            parent.isFocused.wrappedValue = textView.window?.firstResponder === textView
             parent.text = textView.string
             textView.needsDisplay = true
         }
@@ -869,25 +882,28 @@ private struct PendingBubble: View {
     }
 }
 
-private struct MessageCard: View, Equatable {
+private struct MessageCard: View {
     let message: SessionMessageDisplay
+    @Binding var isShowingMetadata: Bool
 
     var body: some View {
         if message.isToolMessage {
-            ToolMessageCard(message: message)
+            ToolMessageCard(
+                message: message,
+                isShowingMetadata: $isShowingMetadata
+            )
         } else {
-            ConversationMessageCard(message: message)
+            ConversationMessageCard(
+                message: message,
+                isShowingMetadata: $isShowingMetadata
+            )
         }
-    }
-
-    nonisolated static func == (lhs: MessageCard, rhs: MessageCard) -> Bool {
-        lhs.message == rhs.message
     }
 }
 
 private struct ConversationMessageCard: View {
     let message: SessionMessageDisplay
-    @State private var isShowingMetadata = false
+    @Binding var isShowingMetadata: Bool
 
     var body: some View {
         HermesInsetSurface {
@@ -962,8 +978,8 @@ private struct ConversationMessageCard: View {
 
 private struct ToolMessageCard: View {
     let message: SessionMessageDisplay
+    @Binding var isShowingMetadata: Bool
     @State private var isExpanded = false
-    @State private var isShowingMetadata = false
 
     private var summary: SessionToolMessageSummary? {
         message.toolSummary

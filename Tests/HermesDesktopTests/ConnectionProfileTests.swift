@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import HermesDesktop
 
@@ -150,5 +151,25 @@ struct ConnectionProfileTests {
             profile.remoteShellBootstrapCommand(startupCommandLine: "printf \"$HOME `whoami`\"") ==
                 "export HERMES_HOME=\"$HOME/.hermes\"; exec \"${SHELL:-/bin/zsh}\" -lc \"printf \\\"\\$HOME \\`whoami\\`\\\"\""
         )
+    }
+
+    @Test
+    func controlPathRecreatesTemporarySocketDirectoryWhenPruned() throws {
+        let fileManager = FileManager.default
+        let paths = AppPaths(fileManager: fileManager)
+        try? fileManager.removeItem(at: paths.controlSocketDirectoryURL)
+
+        let profile = ConnectionProfile(
+            label: "Hermes VM",
+            sshAlias: "hermes",
+            sshUser: "ubuntu"
+        ).updated()
+
+        let controlPath = paths.controlPath(for: profile)
+
+        var isDirectory: ObjCBool = false
+        #expect(fileManager.fileExists(atPath: paths.controlSocketDirectoryURL.path, isDirectory: &isDirectory))
+        #expect(isDirectory.boolValue)
+        #expect(controlPath.hasPrefix(paths.controlSocketDirectoryURL.path))
     }
 }

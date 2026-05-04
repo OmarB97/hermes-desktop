@@ -354,6 +354,28 @@ struct HermesRefreshButton: View {
     }
 }
 
+struct HermesCreateActionButton: View {
+    let title: String
+    let help: String?
+    let action: () -> Void
+
+    init(_ title: String, help: String? = nil, action: @escaping () -> Void) {
+        self.title = title
+        self.help = help
+        self.action = action
+    }
+
+    var body: some View {
+        Button(action: action) {
+            Label(L10n.string(title), systemImage: "plus")
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.regular)
+        .fixedSize(horizontal: true, vertical: false)
+        .help(help.map { L10n.string($0) } ?? L10n.string(title))
+    }
+}
+
 struct HermesBadge: View {
     let text: String
     let tint: Color
@@ -464,6 +486,10 @@ struct HermesExpandableSearchField: View {
     @FocusState private var isFocused: Bool
     @State private var isExpanded = false
 
+    private var localizedPrompt: String {
+        L10n.string(prompt)
+    }
+
     private var shouldShowExpandedField: Bool {
         isExpanded || !text.isEmpty
     }
@@ -484,10 +510,10 @@ struct HermesExpandableSearchField: View {
                     .frame(width: 14, height: 14)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(prompt)
+            .accessibilityLabel(localizedPrompt)
 
             if shouldShowExpandedField {
-                TextField(prompt, text: $text)
+                TextField(localizedPrompt, text: $text)
                     .textFieldStyle(.plain)
                     .font(.subheadline)
                     .focused($isFocused)

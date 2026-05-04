@@ -35,24 +35,29 @@ where the canonical state lives, and which path the app is actually using.
 <table>
   <tr>
     <td width="50%">
-      <img src="assets/CRON-JOBS.png" alt="Hermes Desktop Cron Jobs view" />
+      <img src="assets/sessions.png" alt="Hermes Desktop Sessions view" />
+    </td>
+    <td width="50%">
+      <img src="assets/kanban.png" alt="Hermes Desktop Kanban view" />
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="assets/files.png" alt="Hermes Desktop Files view" />
     </td>
     <td width="50%">
       <img src="assets/USAGE.png" alt="Hermes Desktop Usage view" />
     </td>
   </tr>
   <tr>
-    <td width="50%">
-      <img src="assets/SKILLS.png" alt="Hermes Desktop Skills view" />
-    </td>
-    <td width="50%">
-      <img src="assets/TERMINALE.png" alt="Hermes Desktop Terminal view" />
+    <td colspan="2">
+      <img src="assets/terminal.png" alt="Hermes Desktop Terminal view" />
     </td>
   </tr>
 </table>
 
-A few privacy-safe views from a live Hermes host. The v0.6.0 line also adds the
-native Kanban board and session workbench described below.
+Five views from a live Hermes host: sessions, Kanban, workspace files, usage,
+and terminal workflows.
 
 ## What You Get
 

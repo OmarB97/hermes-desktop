@@ -294,7 +294,7 @@ struct KanbanTask: Codable, Identifiable, Hashable, Sendable, TitleIdentifiable 
 
     var progressLabel: String? {
         guard let progress, progress.total > 0 else { return nil }
-        return "\(progress.done)/\(progress.total) done"
+        return L10n.string("%@/%@ done", "\(progress.done)", "\(progress.total)")
     }
 
     var shortID: String {

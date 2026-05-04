@@ -35,7 +35,9 @@ struct AppPaths {
     }
 
     func controlPath(for connection: ConnectionProfile) -> String {
-        controlSocketDirectoryURL
+        createPrivateDirectoryIfNeeded(at: controlSocketDirectoryURL)
+
+        return controlSocketDirectoryURL
             .appendingPathComponent(controlSocketIdentifier(for: connection))
             .path
     }
