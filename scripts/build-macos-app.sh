@@ -229,6 +229,7 @@ else
 fi
 
 cp "$UNIVERSAL_EXECUTABLE_PATH" "$MACOS_PATH/$APP_NAME"
+xcrun strip -S -x "$MACOS_PATH/$APP_NAME"
 cp "$PLIST_PATH" "$CONTENTS_PATH/Info.plist"
 stamp_plist_versions "$CONTENTS_PATH/Info.plist"
 cp "$ICNS_PATH" "$RESOURCES_PATH/AppIcon.icns"
