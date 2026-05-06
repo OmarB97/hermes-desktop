@@ -2,6 +2,12 @@ import Combine
 import Foundation
 import SwiftUI
 
+private enum PendingSectionEntryAction {
+    case openNewConnectionEditor
+    case prepareNewSessionComposer
+    case openNewTerminalTab(ConnectionProfile)
+}
+
 @MainActor
 final class AppState: ObservableObject {
     @Published var selectedSection: AppSection = .connections
@@ -95,6 +101,8 @@ final class AppState: ObservableObject {
     private let sessionPageSize = 50
     private var sessionOffset = 0
     private var pendingSessionReloadQuery: String?
+    private var pendingSectionEntryAction: PendingSectionEntryAction?
+    private var isNewSessionComposerActive = false
     private var sessionMessageSignature = SessionMessageSignature(messages: [])
     private var connectionTestRequestID: UUID?
     private var hasPerformedAutomaticUpdateCheck = false
@@ -274,9 +282,11 @@ final class AppState: ObservableObject {
     }
 
     func requestNewConnectionEditorFromCommand() {
+        pendingSectionEntryAction = .openNewConnectionEditor
         requestSectionSelection(.connections)
         guard selectedSection == .connections else { return }
         pendingNewConnectionEditorRequestID = UUID()
+        pendingSectionEntryAction = nil
     }
 
     func consumeNewConnectionEditorRequest(_ requestID: UUID) {
@@ -286,17 +296,25 @@ final class AppState: ObservableObject {
 
     func requestNewSessionFromCommand() {
         guard activeConnection != nil, !isSendingSessionMessage else { return }
+        pendingSectionEntryAction = .prepareNewSessionComposer
+        isNewSessionComposerActive = true
         requestSectionSelection(.sessions)
         guard selectedSection == .sessions else { return }
         prepareNewSessionComposer()
+        pendingSectionEntryAction = nil
     }
 
     func openNewTerminalTabFromCommand() {
         guard let profile = activeConnection else { return }
-        terminalWorkspace.addTab(for: profile.updated())
-        selectedSection = .terminal
-        handleSectionEntry(.terminal)
-        setStatusMessage(L10n.string("New Terminal tab opened"))
+        let updatedProfile = profile.updated()
+
+        if hasUnsavedFileChanges && selectedSection == .files {
+            pendingSectionEntryAction = .openNewTerminalTab(updatedProfile)
+            requestSectionSelection(.terminal)
+            return
+        }
+
+        openNewTerminalTab(for: updatedProfile)
     }
 
     func requestSearchFocusFromCommand() {
@@ -358,14 +376,30 @@ final class AppState: ObservableObject {
             workspaceFileDocuments[fileID] = document
         }
         if let pendingSectionSelection {
-            selectedSection = pendingSectionSelection
-            handleSectionEntry(pendingSectionSelection)
+            switch pendingSectionEntryAction {
+            case .openNewConnectionEditor where pendingSectionSelection == .connections:
+                pendingNewConnectionEditorRequestID = UUID()
+                selectedSection = pendingSectionSelection
+                handleSectionEntry(pendingSectionSelection)
+            case .prepareNewSessionComposer where pendingSectionSelection == .sessions:
+                selectedSection = pendingSectionSelection
+                prepareNewSessionComposer()
+                handleSectionEntry(pendingSectionSelection)
+            case .openNewTerminalTab(let profile) where pendingSectionSelection == .terminal:
+                openNewTerminalTab(for: profile)
+            default:
+                selectedSection = pendingSectionSelection
+                handleSectionEntry(pendingSectionSelection)
+            }
         }
         pendingSectionSelection = nil
+        pendingSectionEntryAction = nil
     }
 
     func stayOnCurrentSection() {
         pendingSectionSelection = nil
+        pendingSectionEntryAction = nil
+        isNewSessionComposerActive = false
     }
 
     func connect(to profile: ConnectionProfile) {
@@ -819,6 +853,8 @@ final class AppState: ObservableObject {
                    sessions.contains(where: { $0.id == explicitPreferredSessionID }) ||
                     isSessionPinned(explicitPreferredSessionID) {
                     resolvedPreferredSessionID = explicitPreferredSessionID
+                } else if isNewSessionComposerActive {
+                    resolvedPreferredSessionID = nil
                 } else if let previousSelectedSessionID,
                    sessions.contains(where: { $0.id == previousSelectedSessionID }) ||
                     isSessionPinned(previousSelectedSessionID) {
@@ -856,6 +892,7 @@ final class AppState: ObservableObject {
         if selectedSessionID != sessionID {
             clearSessionMessages()
         }
+        isNewSessionComposerActive = false
         selectedSessionID = sessionID
         sessionsError = nil
         sessionConversationError = nil
@@ -876,6 +913,7 @@ final class AppState: ObservableObject {
     }
 
     func prepareNewSessionComposer() {
+        isNewSessionComposerActive = true
         selectedSessionID = nil
         clearSessionMessages()
         sessionsError = nil
@@ -1965,6 +2003,13 @@ final class AppState: ObservableObject {
         terminalWorkspace.ensureInitialTab(for: profile)
     }
 
+    private func openNewTerminalTab(for profile: ConnectionProfile) {
+        terminalWorkspace.addTab(for: profile)
+        selectedSection = .terminal
+        handleSectionEntry(.terminal)
+        setStatusMessage(L10n.string("New Terminal tab opened"))
+    }
+
     func resumeSessionInTerminal(_ session: SessionSummary) {
         guard let profile = activeConnection else {
             sessionsError = L10n.string("Select a connection before resuming a session in Terminal.")
@@ -2418,8 +2463,10 @@ final class AppState: ObservableObject {
         hasMoreSessions = false
         totalSessionsCount = 0
         selectedSessionID = nil
+        isNewSessionComposerActive = false
         sessionOffset = 0
         pendingSessionReloadQuery = nil
+        pendingSectionEntryAction = nil
         sessionSearchQuery = ""
         usageSummary = nil
         usageProfileBreakdown = nil
