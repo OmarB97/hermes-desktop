@@ -9,12 +9,12 @@ final class FileEditorService: @unchecked Sendable {
         self.sshTransport = sshTransport
     }
 
-    func read(
+    static func makeReadScript(
         remotePath: String,
-        connection: ConnectionProfile
-    ) async throws -> FileSnapshot {
-        let script = try RemotePythonScript.wrap(
-            FileRequest(path: remotePath, maxEditableBytes: maxEditableFileBytes),
+        maxEditableBytes: Int64
+    ) throws -> String {
+        try RemotePythonScript.wrap(
+            FileRequest(path: remotePath, maxEditableBytes: maxEditableBytes),
             body: """
             import hashlib
             import json
@@ -63,37 +63,18 @@ final class FileEditorService: @unchecked Sendable {
                 fail(f"Unable to read {payload['path']}: {exc}")
             """
         )
-
-        let response = try await sshTransport.executeJSON(
-            on: connection,
-            pythonScript: script,
-            responseType: FileReadResponse.self
-        )
-
-        return FileSnapshot(
-            content: response.content,
-            contentHash: response.contentHash
-        )
     }
 
-    func read(
-        file: RemoteTrackedFile,
-        remotePath: String,
-        connection: ConnectionProfile
-    ) async throws -> FileSnapshot {
-        try await read(remotePath: remotePath, connection: connection)
-    }
-
-    func listDirectory(
+    static func makeDirectoryListScript(
         remotePath: String,
         hermesHome: String?,
-        connection: ConnectionProfile
-    ) async throws -> RemoteDirectoryListing {
-        let script = try RemotePythonScript.wrap(
+        maxEntries: Int
+    ) throws -> String {
+        try RemotePythonScript.wrap(
             DirectoryListRequest(
                 path: remotePath,
                 hermesHome: hermesHome,
-                maxEntries: maxDirectoryEntries
+                maxEntries: maxEntries
             ),
             body: """
             import json
@@ -183,21 +164,14 @@ final class FileEditorService: @unchecked Sendable {
                 fail(f"Unable to list {payload['path']}: {exc}")
             """
         )
-
-        return try await sshTransport.executeJSON(
-            on: connection,
-            pythonScript: script,
-            responseType: RemoteDirectoryListing.self
-        )
     }
 
-    func write(
+    static func makeWriteScript(
         remotePath: String,
         content: String,
-        expectedContentHash: String?,
-        connection: ConnectionProfile
-    ) async throws -> FileSaveResult {
-        let script = try RemotePythonScript.wrap(
+        expectedContentHash: String?
+    ) throws -> String {
+        try RemotePythonScript.wrap(
             FileWriteRequest(
                 path: remotePath,
                 content: content,
@@ -279,6 +253,66 @@ final class FileEditorService: @unchecked Sendable {
                 if temp_name and os.path.exists(temp_name):
                     os.unlink(temp_name)
             """
+        )
+    }
+
+    func read(
+        remotePath: String,
+        connection: ConnectionProfile
+    ) async throws -> FileSnapshot {
+        let script = try Self.makeReadScript(
+            remotePath: remotePath,
+            maxEditableBytes: maxEditableFileBytes
+        )
+
+        let response = try await sshTransport.executeJSON(
+            on: connection,
+            pythonScript: script,
+            responseType: FileReadResponse.self
+        )
+
+        return FileSnapshot(
+            content: response.content,
+            contentHash: response.contentHash
+        )
+    }
+
+    func read(
+        file: RemoteTrackedFile,
+        remotePath: String,
+        connection: ConnectionProfile
+    ) async throws -> FileSnapshot {
+        try await read(remotePath: remotePath, connection: connection)
+    }
+
+    func listDirectory(
+        remotePath: String,
+        hermesHome: String?,
+        connection: ConnectionProfile
+    ) async throws -> RemoteDirectoryListing {
+        let script = try Self.makeDirectoryListScript(
+            remotePath: remotePath,
+            hermesHome: hermesHome,
+            maxEntries: maxDirectoryEntries
+        )
+
+        return try await sshTransport.executeJSON(
+            on: connection,
+            pythonScript: script,
+            responseType: RemoteDirectoryListing.self
+        )
+    }
+
+    func write(
+        remotePath: String,
+        content: String,
+        expectedContentHash: String?,
+        connection: ConnectionProfile
+    ) async throws -> FileSaveResult {
+        let script = try Self.makeWriteScript(
+            remotePath: remotePath,
+            content: content,
+            expectedContentHash: expectedContentHash
         )
 
         let response = try await sshTransport.executeJSON(

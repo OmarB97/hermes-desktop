@@ -6,7 +6,7 @@ struct SSHCommandResult {
     let exitCode: Int32
 }
 
-enum SSHTransportError: LocalizedError {
+enum SSHTransportError: LocalizedError, Equatable {
     case invalidConnection(String)
     case launchFailure(String)
     case localFailure(String)
@@ -25,16 +25,29 @@ enum SSHTransportError: LocalizedError {
     }
 }
 
+protocol SSHProcessRunning: Sendable {
+    func run(
+        executableURL: URL,
+        arguments: [String],
+        standardInput: Data?
+    ) async throws -> SSHCommandResult
+}
+
 final class SSHTransport: @unchecked Sendable {
     private let paths: AppPaths
+    private let processRunner: any SSHProcessRunning
 
     private enum ConnectionPurpose {
         case service
         case terminalShell
     }
 
-    init(paths: AppPaths) {
+    init(
+        paths: AppPaths,
+        processRunner: any SSHProcessRunning = FoundationSSHProcessRunner()
+    ) {
         self.paths = paths
+        self.processRunner = processRunner
     }
 
     func execute(
@@ -57,7 +70,7 @@ final class SSHTransport: @unchecked Sendable {
             purpose: .service
         )
 
-        return try await runProcess(
+        return try await processRunner.run(
             executableURL: URL(fileURLWithPath: "/usr/bin/ssh"),
             arguments: arguments,
             standardInput: standardInput
@@ -86,7 +99,11 @@ final class SSHTransport: @unchecked Sendable {
             return try JSONDecoder().decode(Response.self, from: data)
         } catch {
             throw SSHTransportError.invalidResponse(
-                "Failed to decode remote JSON: \(error.localizedDescription)\n\n\(result.stdout)"
+                formattedInvalidJSONResponse(
+                    stdout: result.stdout,
+                    stderr: result.stderr,
+                    decodingError: error
+                )
             )
         }
     }
@@ -100,10 +117,23 @@ final class SSHTransport: @unchecked Sendable {
         )
     }
 
+    func serviceArguments(
+        for connection: ConnectionProfile,
+        remoteCommand: String,
+        allocateTTY: Bool = false
+    ) -> [String] {
+        sshArguments(
+            for: connection,
+            remoteCommand: remoteCommand,
+            allocateTTY: allocateTTY,
+            purpose: .service
+        )
+    }
+
     func validateSuccessfulExit(_ result: SSHCommandResult, for connection: ConnectionProfile? = nil) throws {
         guard result.exitCode == 0 else {
             throw SSHTransportError.remoteFailure(
-                formattedRemoteFailure(
+                describeRemoteFailure(
                     stdout: result.stdout,
                     stderr: result.stderr,
                     exitCode: result.exitCode,
@@ -111,6 +141,20 @@ final class SSHTransport: @unchecked Sendable {
                 )
             )
         }
+    }
+
+    func describeRemoteFailure(
+        stdout: String,
+        stderr: String,
+        exitCode: Int32,
+        connection: ConnectionProfile?
+    ) -> String {
+        formattedRemoteFailure(
+            stdout: stdout,
+            stderr: stderr,
+            exitCode: exitCode,
+            connection: connection
+        )
     }
 
     private func sshArguments(
@@ -170,7 +214,149 @@ final class SSHTransport: @unchecked Sendable {
         return "\(user)@\(target)"
     }
 
-    private func runProcess(
+    private func formattedRemoteFailure(
+        stdout: String,
+        stderr: String,
+        exitCode: Int32,
+        connection: ConnectionProfile?
+    ) -> String {
+        if let structuredError = structuredRemoteError(in: stdout) {
+            return structuredError
+        }
+        if let structuredError = structuredRemoteError(in: stderr) {
+            return structuredError
+        }
+
+        let rawMessage = [stderr, stdout]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first(where: { !$0.isEmpty }) ?? ""
+
+        let lowered = rawMessage.lowercased()
+        let target = connection?.effectiveTarget
+
+        if lowered.contains("permission denied") {
+            return "SSH authentication failed. Verify the key, SSH agent, and user for this SSH target."
+        }
+        if lowered.contains("host key verification failed") {
+            return "SSH host key verification failed. Connect once in Terminal.app or update known_hosts before retrying."
+        }
+        if lowered.contains("remote host identification has changed") {
+            return "The SSH host key changed for this target. Refresh the entry in known_hosts before retrying."
+        }
+        if lowered.contains("could not resolve hostname") || lowered.contains("name or service not known") {
+            return "The SSH target could not be resolved. Check the alias, hostname, IP address, or SSH config entry in this profile."
+        }
+        if lowered.contains("connection refused") {
+            if isLoopbackTarget(target) {
+                return "The SSH server on this Mac refused the connection. If you are connecting to localhost or the same Mac, make sure SSH access is enabled and retry."
+            }
+            return "The SSH server refused the connection. Confirm that SSH is enabled and reachable on the target host."
+        }
+        if lowered.contains("operation timed out") || lowered.contains("connection timed out") {
+            if isLoopbackTarget(target) {
+                return "The SSH connection to this Mac timed out. If you are testing localhost or the same Mac, verify that SSH access is enabled and retry."
+            }
+            return "The SSH connection timed out. Check that the target host is reachable from this Mac and that your SSH route is correct."
+        }
+        if lowered.contains("no route to host") || lowered.contains("network is unreachable") {
+            return "The SSH target is unreachable from this Mac. Check the hostname, IP address, VPN, or local network path and retry."
+        }
+        if lowered.contains("python3: command not found") ||
+            lowered.contains("command not found: python3") ||
+            lowered.contains("python3: not found") ||
+            lowered.contains("unknown command: python3") ||
+            lowered.contains("env: python3: no such file or directory") {
+            if isLoopbackTarget(target) {
+                return "SSH succeeded, but python3 is not available in the non-interactive SSH shell PATH for this Mac. Install python3 or expose it in the SSH shell environment before retrying."
+            }
+            return "SSH succeeded, but python3 is not available in the remote non-interactive SSH shell PATH. Install python3 or expose it in the SSH shell environment before retrying. Hermes Desktop requires python3 for discovery, file editing, and session browsing."
+        }
+
+        if !rawMessage.isEmpty {
+            return rawMessage
+        }
+
+        return "SSH command failed with exit code \(exitCode)."
+    }
+
+    private func isLoopbackTarget(_ target: String?) -> Bool {
+        guard let target else { return false }
+        let normalized = target.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return normalized == "localhost" ||
+            normalized == "127.0.0.1" ||
+            normalized == "::1" ||
+            normalized.hasPrefix("localhost.")
+    }
+
+    private func formattedInvalidJSONResponse(
+        stdout: String,
+        stderr: String,
+        decodingError: Error
+    ) -> String {
+        let trimmedStdout = stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedStderr = stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if looksLikeNonJSONShellOutput(trimmedStdout) {
+            let guidance = "Remote command returned non-JSON output. This usually means a shell startup file printed text during a non-interactive SSH command. Keep startup files quiet for non-interactive SSH sessions and retry."
+            let preview = shortenedOutputPreview(trimmedStdout)
+            if preview.isEmpty {
+                return guidance
+            }
+            return "\(guidance)\n\nPreview:\n\(preview)"
+        }
+
+        var message = "Failed to decode remote JSON: \(decodingError.localizedDescription)"
+        if !trimmedStdout.isEmpty {
+            message += "\n\n\(trimmedStdout)"
+        }
+        if trimmedStdout.isEmpty, !trimmedStderr.isEmpty {
+            message += "\n\nstderr:\n\(trimmedStderr)"
+        }
+        return message
+    }
+
+    private func looksLikeNonJSONShellOutput(_ output: String) -> Bool {
+        guard let firstCharacter = output.first else { return false }
+        if firstCharacter == "{" || firstCharacter == "[" {
+            return false
+        }
+
+        let lowered = output.lowercased()
+        return output.contains("{") ||
+            output.contains("[") ||
+            lowered.contains("welcome") ||
+            lowered.contains("last login")
+    }
+
+    private func shortenedOutputPreview(_ output: String, limit: Int = 240) -> String {
+        guard output.count > limit else { return output }
+        let endIndex = output.index(output.startIndex, offsetBy: limit)
+        return String(output[..<endIndex]).trimmingCharacters(in: .whitespacesAndNewlines) + "..."
+    }
+
+    private func structuredRemoteError(in output: String) -> String? {
+        guard let data = output.data(using: .utf8),
+              let payload = try? JSONDecoder().decode(RemoteErrorPayload.self, from: data),
+              let error = payload.trimmedError else {
+            return nil
+        }
+
+        return error
+    }
+}
+
+private struct RemoteErrorPayload: Decodable {
+    let error: String?
+
+    var trimmedError: String? {
+        guard let error else { return nil }
+        let trimmed = error.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+private struct FoundationSSHProcessRunner: SSHProcessRunning {
+    func run(
         executableURL: URL,
         arguments: [String],
         standardInput: Data?
@@ -253,96 +439,6 @@ final class SSHTransport: @unchecked Sendable {
                 continuation.resume(throwing: SSHTransportError.launchFailure(error.localizedDescription))
             }
         }
-    }
-
-    private func formattedRemoteFailure(
-        stdout: String,
-        stderr: String,
-        exitCode: Int32,
-        connection: ConnectionProfile?
-    ) -> String {
-        if let structuredError = structuredRemoteError(in: stdout) {
-            return structuredError
-        }
-        if let structuredError = structuredRemoteError(in: stderr) {
-            return structuredError
-        }
-
-        let rawMessage = [stderr, stdout]
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .first(where: { !$0.isEmpty }) ?? ""
-
-        let lowered = rawMessage.lowercased()
-        let target = connection?.effectiveTarget
-
-        if lowered.contains("permission denied") {
-            return "SSH authentication failed. Verify the key, SSH agent, and user for this SSH target."
-        }
-        if lowered.contains("host key verification failed") {
-            return "SSH host key verification failed. Connect once in Terminal.app or update known_hosts before retrying."
-        }
-        if lowered.contains("remote host identification has changed") {
-            return "The SSH host key changed for this target. Refresh the entry in known_hosts before retrying."
-        }
-        if lowered.contains("could not resolve hostname") || lowered.contains("name or service not known") {
-            return "The SSH target could not be resolved. Check the alias, hostname, IP address, or SSH config entry in this profile."
-        }
-        if lowered.contains("connection refused") {
-            if isLoopbackTarget(target) {
-                return "The SSH server on this Mac refused the connection. If you are connecting to localhost or the same Mac, make sure SSH access is enabled and retry."
-            }
-            return "The SSH server refused the connection. Confirm that SSH is enabled and reachable on the target host."
-        }
-        if lowered.contains("operation timed out") || lowered.contains("connection timed out") {
-            if isLoopbackTarget(target) {
-                return "The SSH connection to this Mac timed out. If you are testing localhost or the same Mac, verify that SSH access is enabled and retry."
-            }
-            return "The SSH connection timed out. Check that the target host is reachable from this Mac and that your SSH route is correct."
-        }
-        if lowered.contains("no route to host") || lowered.contains("network is unreachable") {
-            return "The SSH target is unreachable from this Mac. Check the hostname, IP address, VPN, or local network path and retry."
-        }
-        if lowered.contains("python3: command not found") || lowered.contains("python3: not found") {
-            if isLoopbackTarget(target) {
-                return "SSH succeeded, but python3 is not available in the SSH shell for this Mac. Install python3 or expose it in the non-interactive SSH environment before retrying."
-            }
-            return "SSH succeeded, but python3 is not available in the remote shell environment. The MVP requires python3 for discovery, file editing, and session browsing."
-        }
-
-        if !rawMessage.isEmpty {
-            return rawMessage
-        }
-
-        return "SSH command failed with exit code \(exitCode)."
-    }
-
-    private func isLoopbackTarget(_ target: String?) -> Bool {
-        guard let target else { return false }
-        let normalized = target.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return normalized == "localhost" ||
-            normalized == "127.0.0.1" ||
-            normalized == "::1" ||
-            normalized.hasPrefix("localhost.")
-    }
-
-    private func structuredRemoteError(in output: String) -> String? {
-        guard let data = output.data(using: .utf8),
-              let payload = try? JSONDecoder().decode(RemoteErrorPayload.self, from: data),
-              let error = payload.trimmedError else {
-            return nil
-        }
-
-        return error
-    }
-}
-
-private struct RemoteErrorPayload: Decodable {
-    let error: String?
-
-    var trimmedError: String? {
-        guard let error else { return nil }
-        let trimmed = error.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
     }
 }
 

@@ -7,32 +7,32 @@ final class ConnectionStore: ObservableObject {
     @Published private(set) var persistenceError: String?
     @Published var lastConnectionID: UUID? {
         didSet {
-            savePreferences()
+            persistPreferencesIfNeeded()
         }
     }
     @Published var terminalTheme: TerminalThemePreference = .defaultValue {
         didSet {
-            savePreferences()
+            persistPreferencesIfNeeded()
         }
     }
     @Published var automaticallyChecksForUpdates = true {
         didSet {
-            savePreferences()
+            persistPreferencesIfNeeded()
         }
     }
     @Published var lastAutomaticUpdateCheckAt: Date? {
         didSet {
-            savePreferences()
+            persistPreferencesIfNeeded()
         }
     }
     @Published private(set) var workspaceFileBookmarks: [WorkspaceFileBookmark] = [] {
         didSet {
-            savePreferences()
+            persistPreferencesIfNeeded()
         }
     }
     @Published private(set) var pinnedSessions: [PinnedSession] = [] {
         didSet {
-            savePreferences()
+            persistPreferencesIfNeeded()
         }
     }
 
@@ -42,6 +42,7 @@ final class ConnectionStore: ObservableObject {
     private let privateFileAttributes: [FileAttributeKey: Any] = [
         .posixPermissions: NSNumber(value: Int16(0o600))
     ]
+    private var isHydratingFromDisk = false
 
     init(paths: AppPaths) {
         self.paths = paths
@@ -159,12 +160,15 @@ final class ConnectionStore: ObservableObject {
     }
 
     private func load() {
+        isHydratingFromDisk = true
+        defer { isHydratingFromDisk = false }
         loadConnections()
         loadPreferences()
     }
 
     private func saveConnections() {
         do {
+            paths.ensureApplicationSupportDirectory()
             let data = try encoder.encode(connections)
             try data.write(to: paths.connectionsURL, options: [.atomic])
             try fileManagerSetPrivatePermissions(at: paths.connectionsURL)
@@ -187,6 +191,7 @@ final class ConnectionStore: ObservableObject {
         )
 
         do {
+            paths.ensureApplicationSupportDirectory()
             let data = try encoder.encode(preferences)
             try data.write(to: paths.preferencesURL, options: [.atomic])
             try fileManagerSetPrivatePermissions(at: paths.preferencesURL)
@@ -216,31 +221,43 @@ final class ConnectionStore: ObservableObject {
         do {
             let data = try Data(contentsOf: paths.preferencesURL)
             let decoded = try decoder.decode(AppPreferences.self, from: data)
-            lastConnectionID = decoded.lastConnectionID
-            terminalTheme = decoded.terminalTheme ?? .defaultValue
-            automaticallyChecksForUpdates = decoded.automaticallyChecksForUpdates ?? true
-            lastAutomaticUpdateCheckAt = decoded.lastAutomaticUpdateCheckAt
-            workspaceFileBookmarks = decoded.workspaceFileBookmarks ?? []
-            pinnedSessions = decoded.pinnedSessions ?? []
+            applyPreferences(decoded)
             try? fileManagerSetPrivatePermissions(at: paths.preferencesURL)
         } catch let error as CocoaError where error.code == .fileReadNoSuchFile {
-            lastConnectionID = nil
-            terminalTheme = .defaultValue
-            automaticallyChecksForUpdates = true
-            lastAutomaticUpdateCheckAt = nil
-            workspaceFileBookmarks = []
-            pinnedSessions = []
+            applyDefaultPreferences()
         } catch {
-            lastConnectionID = nil
-            terminalTheme = .defaultValue
-            automaticallyChecksForUpdates = true
-            lastAutomaticUpdateCheckAt = nil
-            workspaceFileBookmarks = []
-            pinnedSessions = []
+            applyDefaultPreferences()
             reportPersistenceError(
                 "Unable to load app preferences from \(paths.preferencesURL.lastPathComponent): \(error.localizedDescription)"
             )
         }
+    }
+
+    private func persistPreferencesIfNeeded() {
+        guard !isHydratingFromDisk else { return }
+        savePreferences()
+    }
+
+    private func applyDefaultPreferences() {
+        applyPreferences(
+            AppPreferences(
+                lastConnectionID: nil,
+                terminalTheme: .defaultValue,
+                automaticallyChecksForUpdates: true,
+                lastAutomaticUpdateCheckAt: nil,
+                workspaceFileBookmarks: [],
+                pinnedSessions: []
+            )
+        )
+    }
+
+    private func applyPreferences(_ preferences: AppPreferences) {
+        lastConnectionID = preferences.lastConnectionID
+        terminalTheme = preferences.terminalTheme ?? .defaultValue
+        automaticallyChecksForUpdates = preferences.automaticallyChecksForUpdates ?? true
+        lastAutomaticUpdateCheckAt = preferences.lastAutomaticUpdateCheckAt
+        workspaceFileBookmarks = preferences.workspaceFileBookmarks ?? []
+        pinnedSessions = preferences.pinnedSessions ?? []
     }
 
     private func reportPersistenceError(_ message: String) {

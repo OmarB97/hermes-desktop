@@ -12,30 +12,45 @@ struct AppPaths {
     private static let privateDirectoryPermissions = NSNumber(value: Int16(0o700))
 
     init(fileManager: FileManager = .default) {
-        self.fileManager = fileManager
-
         let baseSupport = fileManager.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
         ).first ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-        let appSupport = baseSupport.appendingPathComponent("HermesDesktop", isDirectory: true)
-
-        let controlDirectory = URL(
-            fileURLWithPath: "/tmp/hd-\(getuid())",
-            isDirectory: true
+        self.init(
+            fileManager: fileManager,
+            applicationSupportURL: baseSupport.appendingPathComponent("HermesDesktop", isDirectory: true),
+            controlSocketDirectoryURL: URL(
+                fileURLWithPath: "/tmp/hd-\(getuid())",
+                isDirectory: true
+            )
         )
+    }
 
-        self.applicationSupportURL = appSupport
-        self.connectionsURL = appSupport.appendingPathComponent("connections.json")
-        self.preferencesURL = appSupport.appendingPathComponent("preferences.json")
-        self.controlSocketDirectoryURL = controlDirectory
+    init(
+        fileManager: FileManager = .default,
+        applicationSupportURL: URL,
+        controlSocketDirectoryURL: URL
+    ) {
+        self.fileManager = fileManager
+        self.applicationSupportURL = applicationSupportURL
+        self.connectionsURL = applicationSupportURL.appendingPathComponent("connections.json")
+        self.preferencesURL = applicationSupportURL.appendingPathComponent("preferences.json")
+        self.controlSocketDirectoryURL = controlSocketDirectoryURL
 
-        createPrivateDirectoryIfNeeded(at: appSupport)
-        createPrivateDirectoryIfNeeded(at: controlDirectory)
+        ensureApplicationSupportDirectory()
+        ensureControlSocketDirectory()
+    }
+
+    func ensureApplicationSupportDirectory() {
+        createPrivateDirectoryIfNeeded(at: applicationSupportURL)
+    }
+
+    func ensureControlSocketDirectory() {
+        createPrivateDirectoryIfNeeded(at: controlSocketDirectoryURL)
     }
 
     func controlPath(for connection: ConnectionProfile) -> String {
-        createPrivateDirectoryIfNeeded(at: controlSocketDirectoryURL)
+        ensureControlSocketDirectory()
 
         return controlSocketDirectoryURL
             .appendingPathComponent(controlSocketIdentifier(for: connection))
