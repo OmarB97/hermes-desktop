@@ -24,7 +24,7 @@ struct ConnectionProfileTests {
         #expect(profile.remotePath(for: .memory) == "~/.hermes/memories/MEMORY.md")
         #expect(
             profile.remoteShellBootstrapCommand ==
-                "export HERMES_HOME=\"$HOME/.hermes\"; exec \"${SHELL:-/bin/zsh}\" -l"
+                #"exec /bin/sh -c "export HERMES_HOME=\"\$HOME/.hermes\"; exec \"\${SHELL:-/bin/zsh}\" -l""#
         )
         #expect(profile.displayDestination == "alice@hermes-home")
         #expect(profile.resolvedPort == nil)
@@ -50,7 +50,7 @@ struct ConnectionProfileTests {
         #expect(profileScoped.remoteKanbanDatabasePath == "~/.hermes/kanban.db")
         #expect(
             profileScoped.remoteShellBootstrapCommand ==
-                "export HERMES_HOME=\"$HOME/.hermes/profiles/researcher\"; exec \"${SHELL:-/bin/zsh}\" -l"
+                #"exec /bin/sh -c "export HERMES_HOME=\"\$HOME/.hermes/profiles/researcher\"; exec \"\${SHELL:-/bin/zsh}\" -l""#
         )
         #expect(base.workspaceScopeFingerprint != profileScoped.workspaceScopeFingerprint)
         #expect(base.hostConnectionFingerprint == profileScoped.hostConnectionFingerprint)
@@ -68,7 +68,7 @@ struct ConnectionProfileTests {
 
         #expect(
             profile.remoteShellBootstrapCommand ==
-                "export HERMES_HOME=\"$HOME/.hermes/profiles/research\\\"lab\"; exec \"${SHELL:-/bin/zsh}\" -l"
+                #"exec /bin/sh -c "export HERMES_HOME=\"\$HOME/.hermes/profiles/research\\\"lab\"; exec \"\${SHELL:-/bin/zsh}\" -l""#
         )
     }
 
@@ -83,7 +83,7 @@ struct ConnectionProfileTests {
 
         #expect(
             profile.remoteShellBootstrapCommand ==
-                "export HERMES_HOME=\"$HOME/.hermes/profiles/research\\$HOME\\`whoami\\`\"; exec \"${SHELL:-/bin/zsh}\" -l"
+                #"exec /bin/sh -c "export HERMES_HOME=\"\$HOME/.hermes/profiles/research\\\$HOME\\\`whoami\\\`\"; exec \"\${SHELL:-/bin/zsh}\" -l""#
         )
     }
 
@@ -136,7 +136,7 @@ struct ConnectionProfileTests {
 
         #expect(
             profile.remoteShellBootstrapCommand(startupCommandLine: "hermes --profile researcher --resume 'debug session'\\''s final turn'") ==
-                "export HERMES_HOME=\"$HOME/.hermes/profiles/researcher\"; exec \"${SHELL:-/bin/zsh}\" -lc \"hermes --profile researcher --resume 'debug session'\\\\''s final turn'\""
+                #"exec /bin/sh -c "export HERMES_HOME=\"\$HOME/.hermes/profiles/researcher\"; exec \"\${SHELL:-/bin/zsh}\" -lc \"hermes --profile researcher --resume 'debug session'\\\\''s final turn'\"""#
         )
     }
 
@@ -149,8 +149,41 @@ struct ConnectionProfileTests {
 
         #expect(
             profile.remoteShellBootstrapCommand(startupCommandLine: "printf \"$HOME `whoami`\"") ==
-                "export HERMES_HOME=\"$HOME/.hermes\"; exec \"${SHELL:-/bin/zsh}\" -lc \"printf \\\"\\$HOME \\`whoami\\`\\\"\""
+                #"exec /bin/sh -c "export HERMES_HOME=\"\$HOME/.hermes\"; exec \"\${SHELL:-/bin/zsh}\" -lc \"printf \\\"\\\$HOME \\\`whoami\\\`\\\"\"""#
         )
+    }
+
+    @Test
+    func wrappedBootstrapCanRunUnderPOSIXOuterShell() throws {
+        let profile = ConnectionProfile(
+            label: "Default",
+            sshHost: "example.com"
+        ).updated()
+
+        let result = try runBootstrapLocally(
+            profile.remoteShellBootstrapCommand(startupCommandLine: #"printf "%s\n" "$HERMES_HOME""#)
+        )
+
+        #expect(result.exitCode == 0)
+        #expect(result.stdout == "/tmp/hermes-home/.hermes\n")
+        #expect(result.stderr == "")
+    }
+
+    @Test
+    func wrappedBootstrapKeepsProfileShellSyntaxLiteral() throws {
+        let profile = ConnectionProfile(
+            label: "Shell Expansion",
+            sshHost: "example.com",
+            hermesProfile: "research$HOME`whoami`"
+        ).updated()
+
+        let result = try runBootstrapLocally(
+            profile.remoteShellBootstrapCommand(startupCommandLine: #"printf "%s\n" "$HERMES_HOME""#)
+        )
+
+        #expect(result.exitCode == 0)
+        #expect(result.stdout == "/tmp/hermes-home/.hermes/profiles/research$HOME`whoami`\n")
+        #expect(result.stderr == "")
     }
 
     @Test
@@ -172,4 +205,37 @@ struct ConnectionProfileTests {
         #expect(isDirectory.boolValue)
         #expect(controlPath.hasPrefix(paths.controlSocketDirectoryURL.path))
     }
+}
+
+private struct LocalBootstrapResult {
+    let stdout: String
+    let stderr: String
+    let exitCode: Int32
+}
+
+private func runBootstrapLocally(_ command: String) throws -> LocalBootstrapResult {
+    let process = Process()
+    let stdoutPipe = Pipe()
+    let stderrPipe = Pipe()
+
+    process.executableURL = URL(fileURLWithPath: "/bin/sh")
+    process.arguments = ["-c", command]
+    process.environment = [
+        "HOME": "/tmp/hermes-home",
+        "SHELL": "/bin/sh"
+    ]
+    process.standardOutput = stdoutPipe
+    process.standardError = stderrPipe
+
+    try process.run()
+    process.waitUntilExit()
+
+    let stdout = String(data: stdoutPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+    let stderr = String(data: stderrPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+
+    return LocalBootstrapResult(
+        stdout: stdout,
+        stderr: stderr,
+        exitCode: process.terminationStatus
+    )
 }

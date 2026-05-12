@@ -115,13 +115,17 @@ struct ConnectionProfile: Codable, Identifiable, Equatable, Hashable {
         }
 
         let exportCommand = "export HERMES_HOME=\"\(shellHomeExpression)\""
-        guard let startupCommandLine,
-              !startupCommandLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return "\(exportCommand); exec \"${SHELL:-/bin/zsh}\" -l"
+
+        let innerCommand: String
+        if let startupCommandLine,
+           !startupCommandLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let escapedStartupCommand = startupCommandLine.escapedForDoubleQuotedShellArgument
+            innerCommand = "\(exportCommand); exec \"${SHELL:-/bin/zsh}\" -lc \"\(escapedStartupCommand)\""
+        } else {
+            innerCommand = "\(exportCommand); exec \"${SHELL:-/bin/zsh}\" -l"
         }
 
-        let escapedStartupCommand = startupCommandLine.escapedForDoubleQuotedShellArgument
-        return "\(exportCommand); exec \"${SHELL:-/bin/zsh}\" -lc \"\(escapedStartupCommand)\""
+        return "exec /bin/sh -c \"\(innerCommand.escapedForOuterDoubleQuotedShellCommand)\""
     }
 
     var workspaceScopeFingerprint: String {
@@ -222,6 +226,13 @@ struct ConnectionProfile: Codable, Identifiable, Equatable, Hashable {
 
 private extension String {
     var escapedForDoubleQuotedShellArgument: String {
+        replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "$", with: "\\$")
+            .replacingOccurrences(of: "`", with: "\\`")
+    }
+
+    var escapedForOuterDoubleQuotedShellCommand: String {
         replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
             .replacingOccurrences(of: "$", with: "\\$")
