@@ -56,7 +56,7 @@ Current files written there include:
 - `preferences.json`
   App preferences and lightweight workspace state such as last-used
   connection, terminal theme preference, update-check preference, bookmarked
-  remote files, and pinned sessions
+  remote files, pinned sessions, and workflow presets
 
 These files are written with private file permissions (`0600`) and the app
 support directory is created with private directory permissions (`0700`).
@@ -84,6 +84,11 @@ local source of truth:
 
 Unsaved edits can still exist transiently in app memory while you are working,
 but the app's design is to read and write the canonical state on the host.
+
+Workflow presets are the notable local exception: they are intentionally stored
+as lightweight launch helpers on your Mac, scoped to the selected host/profile,
+and used only to seed a fresh remote Terminal session. They are not a local
+mirror of remote Hermes state.
 
 ## Secrets And Credentials
 

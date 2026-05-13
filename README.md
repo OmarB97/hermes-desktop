@@ -3,8 +3,8 @@
 Native macOS companion for Hermes Agent over SSH.
 
 It turns the daily Hermes loop into something you can actually live in on a
-Mac: sessions, Kanban, workspace files, usage, skills, cron jobs, and a real
-terminal in one focused window.
+Mac: sessions, workflows, Kanban, workspace files, usage, skills, cron jobs,
+and a real terminal in one focused window.
 
 If Hermes is already part of how you work, the app should feel immediately
 legible. Same host. Same files. Same profiles. Same source of truth.
@@ -48,8 +48,9 @@ which path the app is using, and where the work is happening.
   </tr>
 </table>
 
-Six views from the app: sessions, Kanban, workspace files, usage,
-skills, and terminal workflows.
+Six previewed views from the app: sessions, Kanban, workspace files, usage,
+skills, and terminal. The current release also adds a dedicated Workflows
+workspace for reusable terminal launch presets.
 
 ## At A Glance
 
@@ -60,6 +61,8 @@ host they already use, without adding another layer to trust.
 - keeps the Hermes host as the only source of truth
 - works with multiple Hermes profiles for a multi-agent workflow
 - reads the real remote sessions, Kanban, cron jobs, skills, files, and usage
+- saves reusable workflow presets locally on your Mac, then launches them
+  against the selected host/profile in a fresh Terminal tab
 - includes an embedded SSH terminal for the moments where the shell is still
   the right tool
 - ships as a universal macOS app for Apple Silicon and Intel Macs
@@ -75,6 +78,11 @@ The app talks to the selected host over SSH. Sessions come from the remote
 session store. Kanban comes from the upstream Hermes Kanban home. Cron jobs
 come from the remote scheduler state. Files and skills are edited on the host
 with conflict checks before save.
+
+Workflow presets are the intentional local convenience layer in that model.
+They are small saved prompts with optional skill selections stored on your Mac,
+scoped to the active host/profile, and used only to open a fresh remote
+Terminal tab. They do not create a second copy of Hermes state on the host.
 
 That makes the app easier to reason about. There is no hidden execution layer
 to audit, no shadow state to reconcile, and no ambiguity about which machine
@@ -95,8 +103,8 @@ installation: configuration, API keys, logs, sessions, analytics, cron jobs,
 skills, and browser chat.
 
 Use Hermes Desktop when you want to work close to the host from your Mac:
-sessions, Kanban, remote files, editable skills, usage, cron jobs, and a real
-terminal without adding another backend around Hermes.
+sessions, workflows, Kanban, remote files, editable skills, usage, cron jobs,
+and a real terminal without adding another backend around Hermes.
 
 The boundary is simple: browser for administration, Mac app for direct host
 work.
@@ -210,8 +218,8 @@ Hermes Desktop can target multiple profiles on the same SSH host.
   `~/.hermes/profiles/researcher`
 
 The profile is not just a label. It flows through the app: Overview, Sessions,
-Usage, Cron Jobs, Files, Skills, chat, and Terminal all stay aligned with the
-selected host and profile.
+Workflows, Usage, Cron Jobs, Files, Skills, chat, and Terminal all stay
+aligned with the selected host and profile.
 
 ### Connect To The Same Mac
 
@@ -243,6 +251,10 @@ It gives the real Hermes workflow a native workbench:
   Searches and reads the remote session store, including transcript content.
   You can pin important sessions, continue a chat, resume in Terminal, and keep
   the session history close while you work.
+- `Workflows`
+  Saves reusable prompt presets on your Mac, scoped to the active host/profile,
+  with optional skill selections. Running one opens a fresh Terminal tab and
+  seeds the first Hermes turn without adding any remote shadow state.
 - `Kanban`
   Opens the upstream Hermes Kanban workspace from the host. Board management,
   task editing, triage flows, comments, dependencies, run history, and recovery
@@ -379,13 +391,14 @@ and consider building from source.
 
 On the Hermes host.
 
-Sessions, Kanban, cron jobs, files, skills, and usage are read from the selected
-host and profile. Hermes Desktop does not maintain a local mirror of Hermes
-state.
+Sessions, Kanban, cron jobs, files, skills, and usage are read from the
+selected host and profile. Hermes Desktop does not maintain a local mirror of
+Hermes state.
 
 Some local app preferences and connection details are stored under
-`~/Library/Application Support/HermesDesktop`. The current local state is
-documented in [SECURITY.md](SECURITY.md).
+`~/Library/Application Support/HermesDesktop`. That includes connection
+profiles, pinned sessions, bookmarked files, and workflow presets. The current
+local state is documented in [SECURITY.md](SECURITY.md).
 
 ### Why do I still need SSH working in Terminal first?
 
