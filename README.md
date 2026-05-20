@@ -78,15 +78,6 @@ session store. Kanban comes from the upstream Hermes Kanban home. Cron jobs
 come from the remote scheduler state. Files and skills are edited on the host
 with conflict checks before save.
 
-Workflow presets are the intentional local convenience layer in that model.
-They are small saved prompts with optional skill selections stored on your Mac,
-scoped to the active host/profile, and used only to open a fresh remote
-Terminal tab. They do not create a second copy of Hermes state on the host.
-
-That makes the app easier to reason about. There is no hidden execution layer
-to audit, no shadow state to reconcile, and no ambiguity about which machine
-owns the work.
-
 That restraint has a practical advantage: Hermes Desktop can remain useful when
 higher-level surfaces are unavailable. If a dashboard, gateway, or agent
 configuration breaks, the app still has the direct SSH path: inspect the host,
@@ -121,8 +112,8 @@ Setup is intentionally lightweight. Before you install, make sure you have:
 - `python3` available on the Hermes host
 - Hermes data under the remote user's `~/.hermes`
 
-For in-app chat and terminal resume workflows, the remote `hermes` CLI also
-needs to be available on the host's non-interactive SSH `PATH`.
+For Sessions Chat, Terminal resume, and workflow launch, the remote `hermes`
+CLI also needs to be available on the host's non-interactive SSH `PATH`.
 
 For the native Kanban workspace, the host needs a Hermes Agent build with
 upstream Kanban support. Newer Kanban features appear automatically when the
@@ -279,12 +270,14 @@ It gives the real Hermes workflow a native workbench:
 Hermes Desktop does not replace the terminal surfaces Hermes already gives you.
 It lets you choose the right one for the job.
 
-- Use in-app chat in `Sessions` for quick turns, context checks, and continuing
-  a session while you are already in the app.
+- Use `Chat` in `Sessions` when you want the real Hermes TUI embedded in the
+  app, already scoped to the selected SSH host and Hermes profile.
+- Use `Transcript` in `Sessions` when you want to inspect persisted history from
+  the host without starting or resuming a live TUI.
 - Use the embedded `Terminal` for heavier work where you want shell control,
   command approvals, long-running output, or manual review close at hand.
-- Use `hermes --tui` in the terminal when you want Hermes Agent's richer TUI for
-  longer interactive sessions.
+- Use `hermes --tui` in any terminal when you want the same Hermes TUI outside
+  the desktop layout.
 
 All of these paths still run Hermes on the selected host. The choice is about
 surface area, not about creating a second source of truth.
@@ -407,17 +400,17 @@ non-interactive way.
 If Terminal still needs password entry, host key confirmation, or other
 interactive setup for that target, the app will usually hit the same wall.
 
-### What does in-app chat do?
+### What does Sessions Chat do?
 
-It runs Hermes on the selected host over SSH.
+It runs the real Hermes TUI on the selected host over SSH.
 
-Starting a new chat uses the remote `hermes chat` path. Continuing a session
-uses the remote resume path with the selected Hermes profile preserved when one
-is active.
+Starting a new chat launches `hermes --tui`. Continuing a session launches
+`hermes --tui --resume <session-id>`, with the selected Hermes profile preserved
+when one is active.
 
-If Hermes requests command approval during a non-interactive chat turn, Hermes
-Desktop cannot collect a manual approval inside that chat surface. When you
-need to review or approve commands yourself, resume the session in Terminal.
+The important detail is that Chat is a surface over the host's Hermes TUI, not a
+separate Desktop conversation backend. Sessions still reads persisted
+transcripts back from the host, and the host remains the source of truth.
 
 ### Does Hermes Desktop replace a remote file manager or IDE?
 

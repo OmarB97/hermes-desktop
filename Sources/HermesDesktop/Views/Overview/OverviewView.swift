@@ -70,7 +70,7 @@ struct OverviewView: View {
                     .frame(minWidth: 420, maxWidth: .infinity)
 
                 VStack(alignment: .leading, spacing: 16) {
-                    sessionHistoryPanel(overview)
+                    chatPanel(overview)
                     kanbanPanel(overview)
                 }
                 .frame(minWidth: 420, maxWidth: .infinity, alignment: .top)
@@ -84,7 +84,7 @@ struct OverviewView: View {
             workspacePanel(overview)
             statusPanel(for: overview)
             workspaceFilesPanel(overview)
-            sessionHistoryPanel(overview)
+            chatPanel(overview)
             kanbanPanel(overview)
         }
     }
@@ -168,6 +168,20 @@ struct OverviewView: View {
                         OverviewStatusRow(item: item)
                     }
                 }
+
+                HStack(spacing: 10) {
+                    Button(L10n.string("Refresh Checks")) {
+                        Task {
+                            await appState.refreshOverview(manual: true)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+
+                    Button(L10n.string("Connections")) {
+                        appState.requestSectionSelection(.connections)
+                    }
+                    .buttonStyle(.bordered)
+                }
             }
         }
     }
@@ -223,66 +237,47 @@ struct OverviewView: View {
         }
     }
 
-    private func sessionHistoryPanel(_ overview: RemoteDiscovery) -> some View {
+    private func chatPanel(_ overview: RemoteDiscovery) -> some View {
         HermesSurfacePanel(
-            title: "Session History",
-            subtitle: "The source Hermes uses for Sessions and Usage on the active host."
+            title: "Chat",
+            subtitle: "Readiness for the embedded Hermes TUI and the transcript source read back from the host."
         ) {
             VStack(alignment: .leading, spacing: 16) {
-                if let sessionStore = overview.sessionStore {
-                    HStack(alignment: .center, spacing: 12) {
-                        Image(systemName: "internaldrive.fill")
-                            .font(.title3)
-                            .foregroundStyle(Color.accentColor)
+                HStack(alignment: .center, spacing: 12) {
+                    Image(systemName: "terminal.fill")
+                        .font(.title3)
+                        .foregroundStyle(isTUIChatReady ? Color.accentColor : .secondary)
 
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(L10n.string("SQLite database detected"))
-                                .font(.headline)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(L10n.string(chatReadinessTitle))
+                            .font(.headline)
 
-                            Text(L10n.string("Hermes can read structured session and message records directly."))
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-
-                        Spacer(minLength: 12)
-
-                        HermesBadge(text: sessionStore.kind.displayName, tint: .accentColor)
+                        Text(L10n.string(chatReadinessDetail))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    VStack(alignment: .leading, spacing: 14) {
-                        HermesInspectorFieldList(fields: sessionStoreFields(sessionStore), labelWidth: 104)
+                    Spacer(minLength: 12)
+
+                    HermesBadge(
+                        text: isTUIChatReady ? "TUI ready" : "Check host",
+                        tint: isTUIChatReady ? .green : .orange
+                    )
+                }
+
+                HermesInspectorFieldList(fields: chatFields(overview), labelWidth: 110)
+
+                HStack(spacing: 10) {
+                    Button(L10n.string("New Chat")) {
+                        appState.requestNewSessionFromCommand()
                     }
-                } else {
-                    HStack(alignment: .center, spacing: 12) {
-                        Image(systemName: "doc.text.magnifyingglass")
-                            .font(.title3)
-                            .foregroundStyle(.secondary)
+                    .buttonStyle(.borderedProminent)
 
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(L10n.string("Using transcript files"))
-                                .font(.headline)
-
-                            Text(L10n.string("No SQLite database was found, so Hermes will fall back to session transcript artifacts when available."))
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-
-                        Spacer(minLength: 12)
-
-                        HermesBadge(text: "JSONL", tint: .secondary)
+                    Button(L10n.string("Open Sessions")) {
+                        appState.requestSectionSelection(.sessions)
                     }
-
-                    HermesInspectorFieldList(fields: [
-                        HermesInspectorField(
-                            id: "transcript-folder",
-                            label: "Transcript folder",
-                            value: overview.paths.sessionsDir,
-                            isMonospaced: true,
-                            emphasizeValue: true
-                        )
-                    ], labelWidth: 112)
+                    .buttonStyle(.bordered)
                 }
             }
         }
@@ -372,6 +367,11 @@ struct OverviewView: View {
                 id: "sessions",
                 title: "Sessions/Usage source",
                 isReady: overview.sessionStore != nil || overview.exists.sessionsDir
+            ),
+            OverviewStatusItem(
+                id: "chat-tui",
+                title: "Chat TUI",
+                isReady: isTUIChatReady
             ),
             OverviewStatusItem(
                 id: "kanban",
@@ -472,6 +472,64 @@ struct OverviewView: View {
         }
 
         return fields
+    }
+
+    private func chatFields(_ overview: RemoteDiscovery) -> [HermesInspectorField] {
+        var fields = [
+            HermesInspectorField(
+                id: "transport",
+                label: "Transport",
+                value: "Hermes TUI over SSH",
+                emphasizeValue: true
+            ),
+            HermesInspectorField(
+                id: "session-source",
+                label: "Session source",
+                value: overview.sessionStore?.kind.displayName ?? "Transcript files"
+            )
+        ]
+
+        if let sessionStore = overview.sessionStore {
+            fields.append(
+                HermesInspectorField(
+                    id: "session-store-path",
+                    label: "Storage path",
+                    value: sessionStore.path,
+                    isMonospaced: true,
+                    emphasizeValue: true
+                )
+            )
+        } else {
+            fields.append(
+                HermesInspectorField(
+                    id: "transcript-folder",
+                    label: "Storage path",
+                    value: overview.paths.sessionsDir,
+                    isMonospaced: true,
+                    emphasizeValue: true
+                )
+            )
+        }
+
+        return fields
+    }
+
+    private var isTUIChatReady: Bool {
+        appState.nativeChatBootstrapStatus?.sshConnected == true &&
+            appState.nativeChatBootstrapStatus?.hermesCLIAvailable == true
+    }
+
+    private var chatReadinessTitle: String {
+        isTUIChatReady ? "Hermes TUI ready" : "Hermes TUI needs attention"
+    }
+
+    private var chatReadinessDetail: String {
+        if isTUIChatReady {
+            return "Chat runs inside the real Hermes TUI; Sessions reads persisted transcripts from the host."
+        }
+
+        return appState.nativeChatBootstrapStatus?.fallbackReason ??
+            "Hermes Desktop is checking whether this host can launch the embedded Chat TUI."
     }
 }
 

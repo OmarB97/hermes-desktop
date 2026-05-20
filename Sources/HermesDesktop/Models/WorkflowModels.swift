@@ -128,6 +128,11 @@ struct WorkflowPreset: Codable, Identifiable, Equatable, Hashable, Sendable {
     }
 }
 
+enum WorkflowRunDestination: Equatable, Sendable {
+    case terminal
+    case chat
+}
+
 struct WorkflowDraft: Equatable {
     var name = ""
     var prompt = ""
@@ -252,5 +257,24 @@ struct WorkflowLaunchInvocation: Equatable, Sendable {
 
         values.append("chat")
         return values
+    }
+}
+
+struct WorkflowChatLaunchInvocation: Equatable, Sendable {
+    let prompt: String
+    let skillCommands: [String]
+    let initialInput: String
+    let tuiInvocation: HermesTUIInvocation
+
+    init(workflow: WorkflowPreset, connection: ConnectionProfile) {
+        self.prompt = workflow.prompt
+        let skillCommands = workflow.assignedSkills.map { "/\($0.slug)" }
+        self.skillCommands = skillCommands
+        self.tuiInvocation = HermesTUIInvocation(sessionID: nil, connection: connection)
+
+        let normalizedPrompt = WorkflowPromptFormatter.normalizeForLaunch(workflow.prompt)
+        self.initialInput = (skillCommands + [normalizedPrompt])
+            .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            .joined(separator: "\n")
     }
 }

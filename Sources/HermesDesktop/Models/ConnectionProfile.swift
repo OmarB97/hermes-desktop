@@ -170,6 +170,14 @@ struct ConnectionProfile: Codable, Identifiable, Equatable, Hashable {
         return "\(remoteHermesCommandPrefix) \(quotedArguments)"
     }
 
+    func remoteServiceCommand(_ commandLine: String) -> String {
+        let exportCommand = "export HERMES_HOME=\"\(remoteHermesHomeShellExpression)\""
+        let pathCommand = "export PATH=\"\(remoteHermesSearchPathShellExpression)\""
+        let escapedCommand = commandLine.escapedForDoubleQuotedShellArgument
+        let innerCommand = "\(exportCommand); \(pathCommand); exec /bin/sh -c \"\(escapedCommand)\""
+        return "exec /bin/sh -c \"\(innerCommand.escapedForOuterDoubleQuotedShellCommand)\""
+    }
+
     var remoteShellBootstrapCommand: String {
         remoteShellBootstrapCommand()
     }

@@ -53,7 +53,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .files:
             "doc.text"
         case .sessions:
-            "clock.arrow.circlepath"
+            "bubble.left.and.bubble.right"
         case .workflows:
             "bookmark.square"
         case .cronjobs:

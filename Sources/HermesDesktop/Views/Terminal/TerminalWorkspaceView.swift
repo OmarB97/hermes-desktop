@@ -213,7 +213,7 @@ private struct TerminalTabChip: View {
     }
 }
 
-private struct TerminalAppearanceToolbarButton: View {
+struct TerminalAppearanceToolbarButton: View {
     let appearance: TerminalThemeAppearance
     @Binding var isPresented: Bool
     @Binding var themePreference: TerminalThemePreference

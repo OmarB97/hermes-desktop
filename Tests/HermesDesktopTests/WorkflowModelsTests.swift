@@ -157,4 +157,27 @@ struct WorkflowModelsTests {
         #expect(invocation.startupCommandLine.contains(#"$HERMES_HOME/hermes-agent/venv/bin/hermes"#))
         #expect(invocation.startupCommandLine.contains(#""$HERMES_BIN" --skills ssh/tools chat"#))
     }
+
+    @Test
+    func chatLaunchInvocationStartsTUIAndSeedsSkillCommands() {
+        let workflow = WorkflowPreset(
+            workspaceScopeFingerprint: "host|user|22|~/.hermes/profiles/research",
+            name: "Investigate",
+            prompt: "Inspect this setup",
+            assignedSkills: [
+                WorkflowSkillReference(relativePath: "ssh/tools", slug: "tools", name: "SSH Tools"),
+                WorkflowSkillReference(relativePath: "deploy-check", slug: "deploy-check", name: "Deploy Check")
+            ]
+        )
+        let connection = ConnectionProfile(
+            label: "Research",
+            sshAlias: "hermes-home",
+            hermesProfile: "research"
+        ).updated()
+
+        let invocation = WorkflowChatLaunchInvocation(workflow: workflow, connection: connection)
+
+        #expect(invocation.tuiInvocation.arguments == ["--profile", "research", "--tui"])
+        #expect(invocation.initialInput == "/deploy-check\n/tools\nInspect this setup")
+    }
 }

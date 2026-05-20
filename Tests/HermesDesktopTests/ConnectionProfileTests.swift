@@ -221,6 +221,21 @@ struct ConnectionProfileTests {
     }
 
     @Test
+    func serviceCommandUsesNonLoginShellToPreservePreparedPath() {
+        let profile = ConnectionProfile(
+            label: "Default",
+            sshHost: "example.com"
+        ).updated()
+
+        let command = profile.remoteServiceCommand("python3 -m tui_gateway.entry")
+
+        #expect(command.contains(#"export HERMES_HOME=\"\$HOME/.hermes\""#))
+        #expect(command.contains(#"export PATH=\"\$HOME/.hermes/hermes-agent/venv/bin:\$HOME/.local/bin:\$HOME/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:\$PATH\""#))
+        #expect(command.contains(#"exec /bin/sh -c \"python3 -m tui_gateway.entry\""#))
+        #expect(!command.contains("exec /bin/sh -lc"))
+    }
+
+    @Test
     func wrappedBootstrapCanRunUnderPOSIXOuterShell() throws {
         let profile = ConnectionProfile(
             label: "Default",

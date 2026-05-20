@@ -10,6 +10,7 @@ struct SessionSearchModelsTests {
           "id": "session-123",
           "title": "Release check",
           "model": "gpt-5.2",
+          "parent_session_id": "session-root",
           "started_at": 1766800000,
           "last_active": "2026-05-03T18:20:00Z",
           "message_count": 12,
@@ -27,6 +28,7 @@ struct SessionSearchModelsTests {
         let summary = try JSONDecoder().decode(SessionSummary.self, from: data)
 
         #expect(summary.id == "session-123")
+        #expect(summary.parentSessionID == "session-root")
         #expect(summary.searchMatch?.matchCount == 3)
         #expect(summary.searchMatch?.messageID == "msg-9")
         #expect(summary.searchMatch?.role == .assistant)

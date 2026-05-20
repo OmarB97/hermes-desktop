@@ -71,22 +71,30 @@ private struct SessionScrollRequest: Equatable {
 }
 
 struct SessionDetailView: View {
+    let connection: ConnectionProfile?
     let session: SessionSummary?
     let messages: [SessionMessageDisplay]
     let errorMessage: String?
-    let conversationError: String?
-    let isSendingMessage: Bool
     let isDeletingSession: Bool
-    let pendingTurn: PendingSessionTurn?
+    let isSessionPinned: Bool
+    let sessionCompactionNotice: SessionCompactionNotice?
+    let mode: SessionDetailMode
+    let terminal: SessionTUITerminal?
+    let terminalTheme: TerminalThemePreference
+    let terminalAppearance: TerminalThemeAppearance
     let isActive: Bool
     let savedScrollOffset: CGFloat?
     let onSaveScrollOffset: (String, CGFloat?) -> Void
     let onResumeInTerminal: (SessionSummary) -> Void
     let onDeleteSession: (SessionSummary) async -> Void
-    let onStartSession: (String, Bool) async -> Bool
-    let onSendMessage: (String, Bool) async -> Bool
+    let onToggleSessionPin: (SessionSummary) -> Void
+    let onModeChange: (SessionDetailMode) -> Void
+    let onStartChat: () -> Void
+    let onUpdateTerminalTheme: (TerminalThemePreference) -> Void
+    let onTerminalExitRefresh: () async -> Void
 
     @State private var showDeleteConfirmation = false
+    @State private var isShowingChatAppearanceEditor = false
     @State private var scrollRequest = SessionScrollRequest()
     @State private var expandedMetadataMessageIDs: Set<String> = []
     @State private var scrollMetrics = SessionScrollMetrics()
@@ -99,64 +107,15 @@ struct SessionDetailView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        scrollContent
-
-                        Color.clear
-                            .frame(height: 1)
-                            .id(sessionDetailBottomID)
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 22)
-                }
-                .background {
-                    SessionScrollOffsetObserver(
-                        sessionID: session?.id,
-                        savedOffset: savedScrollOffset,
-                        restoreRequestID: scrollOffsetRestoreRequestID,
-                        onSaveOffset: onSaveScrollOffset,
-                        onMetricsChange: { metrics in
-                            scrollMetrics = metrics
-                        }
-                    )
-                }
-                .overlay(alignment: .bottomTrailing) {
-                    if shouldShowJumpToLatestButton {
-                        Button {
-                            requestScrollToLatest(proxy, reason: .pendingTurnChanged)
-                        } label: {
-                            Label(L10n.string("Jump to Latest"), systemImage: "arrow.down.to.line")
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.small)
-                        .padding(18)
-                        .transition(.opacity)
-                        .help(L10n.string("Scroll to the latest message"))
-                    }
-                }
-                .onChange(of: session?.id) { _, _ in
-                    expandedMetadataMessageIDs.removeAll()
-                    shouldAutoScrollNextMessageLoad = true
-                    restoreSavedScrollOffsetOrScrollToLatest(proxy)
-                }
-                .onChange(of: latestMessageScrollKey) { _, _ in
-                    guard session != nil, !messages.isEmpty else { return }
-                    handleMessageScrollChange(proxy)
-                }
-                .onChange(of: pendingTurn?.id) { _, _ in
-                    requestScrollToLatest(proxy, reason: .pendingTurnChanged)
-                }
-                .task(id: session?.id) {
-                    restoreSavedScrollOffsetOrScrollToLatest(proxy)
-                }
-            }
+            detailToolbar
 
             Divider()
-                .opacity(0.6)
 
-            composerDock
+            if mode == .transcript {
+                transcriptMode
+            } else {
+                chatMode
+            }
         }
         .alert(L10n.string("Delete this session?"), isPresented: $showDeleteConfirmation, presenting: session) { session in
             Button(L10n.string("Delete"), role: .destructive) {
@@ -174,35 +133,142 @@ struct SessionDetailView: View {
     }
 
     @ViewBuilder
-    private var scrollContent: some View {
+    private var detailToolbar: some View {
+        VStack(alignment: .leading, spacing: 12) {
         if let session {
             SessionSummaryPanel(
                 session: session,
                 isDeleting: isDeletingSession,
+                isPinned: isSessionPinned,
+                onOpenInTerminal: { onResumeInTerminal(session) },
+                onTogglePin: { onToggleSessionPin(session) },
                 onDelete: { showDeleteConfirmation = true }
             )
+        } else {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L10n.string("New Chat"))
+                        .font(.title3.weight(.semibold))
 
-            if let errorMessage {
-                HermesSurfacePanel {
-                    Text(errorMessage)
-                        .foregroundStyle(.red)
+                    Text(newChatSubtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
+
+                Spacer()
+            }
+        }
+
+            Picker("", selection: modeBinding) {
+                Text(L10n.string("Transcript")).tag(SessionDetailMode.transcript)
+                Text(L10n.string("Chat")).tag(SessionDetailMode.chat)
+            }
+            .pickerStyle(.segmented)
+            .fixedSize(horizontal: true, vertical: false)
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 16)
+        .background(.bar)
+    }
+
+    private var modeBinding: Binding<SessionDetailMode> {
+        Binding {
+            mode
+        } set: { newValue in
+            onModeChange(newValue)
+        }
+    }
+
+    private var terminalThemeBinding: Binding<TerminalThemePreference> {
+        Binding {
+            terminalTheme
+        } set: { newValue in
+            onUpdateTerminalTheme(newValue)
+        }
+    }
+
+    private var newChatSubtitle: String {
+        guard let connection else {
+            return L10n.string("Select an SSH host to start a live Hermes TUI.")
+        }
+        return "\(connection.label) - \(connection.displayDestination) - \(connection.resolvedHermesProfileName)"
+    }
+
+    private var transcriptMode: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    transcriptScrollContent
+
+                    Color.clear
+                        .frame(height: 1)
+                        .id(sessionDetailBottomID)
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 22)
+            }
+            .background {
+                SessionScrollOffsetObserver(
+                    sessionID: session?.id,
+                    savedOffset: savedScrollOffset,
+                    restoreRequestID: scrollOffsetRestoreRequestID,
+                    onSaveOffset: onSaveScrollOffset,
+                    onMetricsChange: { metrics in
+                        scrollMetrics = metrics
+                    }
+                )
+            }
+            .overlay(alignment: .bottomTrailing) {
+                if shouldShowJumpToLatestButton {
+                    Button {
+                        requestScrollToLatest(proxy, reason: .pendingTurnChanged)
+                    } label: {
+                        Label(L10n.string("Jump to Latest"), systemImage: "arrow.down.to.line")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .padding(18)
+                    .transition(.opacity)
+                    .help(L10n.string("Scroll to the latest message"))
+                }
+            }
+            .onChange(of: session?.id) { _, _ in
+                expandedMetadataMessageIDs.removeAll()
+                shouldAutoScrollNextMessageLoad = true
+                restoreSavedScrollOffsetOrScrollToLatest(proxy)
+            }
+            .onChange(of: latestMessageScrollKey) { _, _ in
+                guard session != nil, !messages.isEmpty else { return }
+                handleMessageScrollChange(proxy)
+            }
+            .task(id: session?.id) {
+                restoreSavedScrollOffsetOrScrollToLatest(proxy)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var transcriptScrollContent: some View {
+        if let errorMessage {
+            HermesSurfacePanel {
+                Text(errorMessage)
+                    .foregroundStyle(.red)
+            }
+        }
+
+        if let session {
+            if let sessionCompactionNotice,
+               sessionCompactionNotice.sourceSessionID == session.id {
+                SessionCompactionNoticeView(notice: sessionCompactionNotice)
             }
 
             transcriptContent(for: session)
-        } else if let pendingTurn, pendingTurn.sessionID == nil {
-            HermesSurfacePanel(
-                title: "Starting Session"
-            ) {
-                PendingSessionTurnView(turn: pendingTurn, showPrompt: true)
-                    .id(pendingTurnScrollID(pendingTurn))
-            }
         } else {
             HermesSurfacePanel {
                 ContentUnavailableView(
                     L10n.string("Start or select a session"),
                     systemImage: "bubble.left.and.bubble.right",
-                    description: Text(L10n.string("Write below to begin a new Hermes conversation, or choose an existing session from the list."))
+                    description: Text(L10n.string("Use New Chat to start the real Hermes TUI, or choose an existing session to inspect its stored transcript."))
                 )
                 .frame(maxWidth: .infinity, minHeight: 320)
             }
@@ -211,9 +277,7 @@ struct SessionDetailView: View {
 
     @ViewBuilder
     private func transcriptContent(for session: SessionSummary) -> some View {
-        let matchingPendingTurn = pendingTurn?.sessionID == session.id ? pendingTurn : nil
-
-        if messages.isEmpty && matchingPendingTurn == nil {
+        if messages.isEmpty {
             HermesSurfacePanel {
                 ContentUnavailableView(
                     L10n.string("No transcript entries"),
@@ -235,34 +299,120 @@ struct SessionDetailView: View {
                         )
                         .id(sessionMessageScrollID(message))
                     }
-
-                    if let matchingPendingTurn {
-                        PendingSessionTurnView(
-                            turn: matchingPendingTurn,
-                            showPrompt: !messages.containsUserPrompt(matchingPendingTurn.prompt)
-                        )
-                        .id(pendingTurnScrollID(matchingPendingTurn))
-                    }
                 }
             }
         }
     }
 
-    private var composerDock: some View {
-        SessionComposerPanel(
-            title: session == nil ? "New Session" : "Continue Session",
-            placeholder: session == nil ? "Start a new Hermes session…" : "Write a reply to continue this session…",
-            errorMessage: conversationError,
-            isSending: isSendingMessage,
-            onResumeInTerminal: session.map { selectedSession in
-                { onResumeInTerminal(selectedSession) }
-            },
-            onSend: session == nil ? onStartSession : onSendMessage
-        )
-        .id(session?.id ?? "new-session")
-        .padding(.horizontal, 24)
-        .padding(.vertical, 12)
-        .background(.bar)
+    @ViewBuilder
+    private var chatMode: some View {
+        if let terminal, terminalMatchesCurrentSelection(terminal) {
+            VStack(spacing: 0) {
+                HStack(spacing: 10) {
+                    Image(systemName: terminal.terminalSession.isRunning ? "terminal.fill" : "terminal")
+                        .foregroundStyle(terminal.terminalSession.isRunning ? Color.green : Color.secondary)
+
+                    Text(L10n.string(terminal.targetLabel))
+                        .font(.subheadline.weight(.semibold))
+
+                    Spacer()
+
+                    TerminalAppearanceToolbarButton(
+                        appearance: terminalAppearance,
+                        isPresented: $isShowingChatAppearanceEditor,
+                        themePreference: terminalThemeBinding
+                    )
+
+                    if let exitCode = terminal.terminalSession.exitCode {
+                        HermesBadge(text: L10n.string("Exited %@", "\(exitCode)"), tint: exitCode == 0 ? .secondary : .orange)
+                    } else if terminal.terminalSession.isRunning {
+                        HermesBadge(text: L10n.string("Running"), tint: Color(red: 0.0, green: 0.58, blue: 0.22))
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.secondary.opacity(0.06))
+
+                SwiftTermTerminalView(
+                    session: terminal.terminalSession,
+                    appearance: terminalAppearance,
+                    isActive: isActive && mode == .chat
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .onChange(of: terminal.terminalSession.exitCode) { _, _ in
+                Task { await onTerminalExitRefresh() }
+            }
+        } else {
+            sessionChatPlaceholder
+        }
+    }
+
+    @ViewBuilder
+    private var sessionChatPlaceholder: some View {
+        HermesSurfacePanel {
+            VStack(alignment: .center, spacing: 14) {
+                ContentUnavailableView(
+                    chatPlaceholderTitle,
+                    systemImage: "terminal",
+                    description: Text(chatPlaceholderDescription)
+                )
+                .frame(maxWidth: .infinity, minHeight: 240)
+
+                HStack(spacing: 10) {
+                    Button {
+                        onStartChat()
+                    } label: {
+                        Label(startChatButtonTitle, systemImage: "play.fill")
+                    }
+                    .buttonStyle(.borderedProminent)
+
+                    if let session {
+                        Button {
+                            onResumeInTerminal(session)
+                        } label: {
+                            Label(L10n.string("Open in Terminal"), systemImage: "macwindow.and.cursorarrow")
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+            }
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    private var chatPlaceholderTitle: String {
+        if terminal != nil {
+            return L10n.string("Another chat is running")
+        }
+        return session == nil ? L10n.string("Start a new Hermes TUI chat") : L10n.string("Start Chat for this session")
+    }
+
+    private var chatPlaceholderDescription: String {
+        if let terminal {
+            return L10n.string("%@ is active. Start a new embedded TUI when you are ready to switch.", terminal.targetLabel)
+        }
+        if let session {
+            return L10n.string("Hermes TUI will resume %@ over the existing SSH-first terminal path.", shortSessionID(session.id))
+        }
+        return L10n.string("Hermes TUI will create the next session on the host; refresh Sessions after it exits or when you return to Transcript.")
+    }
+
+    private var startChatButtonTitle: String {
+        session == nil ? L10n.string("Start New Chat") : L10n.string("Start Chat")
+    }
+
+    private func terminalMatchesCurrentSelection(_ terminal: SessionTUITerminal) -> Bool {
+        guard let connection else { return false }
+        return terminal.matches(sessionID: session?.id, connection: connection)
+    }
+
+    private func shortSessionID(_ sessionID: String) -> String {
+        if sessionID.count <= 10 {
+            return sessionID
+        }
+        return String(sessionID.prefix(10))
     }
 
     private func metadataExpansionBinding(for messageID: String) -> Binding<Bool> {
@@ -288,12 +438,7 @@ struct SessionDetailView: View {
     }
 
     private var hasLatestTranscriptTarget: Bool {
-        if !messages.isEmpty {
-            return true
-        }
-
-        guard let pendingTurn else { return false }
-        return pendingTurn.sessionID == nil || pendingTurn.sessionID == session?.id
+        !messages.isEmpty
     }
 
     private var isNearLatest: Bool {
@@ -301,12 +446,6 @@ struct SessionDetailView: View {
     }
 
     private func handleMessageScrollChange(_ proxy: ScrollViewProxy) {
-        if pendingTurn != nil {
-            shouldAutoScrollNextMessageLoad = false
-            requestScrollToLatest(proxy, reason: .messagesChangedWhilePending)
-            return
-        }
-
         if shouldAutoScrollNextMessageLoad {
             shouldAutoScrollNextMessageLoad = false
             requestScrollToLatest(proxy, reason: .messagesLoaded)
@@ -384,11 +523,6 @@ struct SessionDetailView: View {
     }
 
     private var latestScrollTarget: (id: String, anchor: UnitPoint) {
-        if let pendingTurn,
-           pendingTurn.sessionID == nil || pendingTurn.sessionID == session?.id {
-            return (pendingTurnScrollID(pendingTurn), .bottom)
-        }
-
         if let lastMessage = messages.last {
             return (sessionMessageScrollID(lastMessage), .top)
         }
@@ -621,6 +755,9 @@ private final class SessionScrollOffsetProbeView: NSView {
 private struct SessionSummaryPanel: View {
     let session: SessionSummary
     let isDeleting: Bool
+    let isPinned: Bool
+    let onOpenInTerminal: () -> Void
+    let onTogglePin: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
@@ -656,6 +793,21 @@ private struct SessionSummaryPanel: View {
                         }
 
                         Menu {
+                            Button {
+                                onOpenInTerminal()
+                            } label: {
+                                Label(L10n.string("Open in terminal"), systemImage: "terminal")
+                            }
+
+                            Button {
+                                onTogglePin()
+                            } label: {
+                                Label(
+                                    L10n.string(isPinned ? "Unpin session" : "Pin session"),
+                                    systemImage: isPinned ? "pin.slash" : "pin"
+                                )
+                            }
+
                             Button(L10n.string("Delete session"), role: .destructive, action: onDelete)
                         } label: {
                             if isDeleting {
@@ -706,10 +858,13 @@ private struct SessionSummaryPanel: View {
 }
 
 private struct SessionComposerPanel: View {
+    @EnvironmentObject private var appState: AppState
+
     let title: String
     let placeholder: String
     let errorMessage: String?
     let isSending: Bool
+    let showsAutoApprove: Bool
     let onResumeInTerminal: (() -> Void)?
     let onSend: (String, Bool) async -> Bool
 
@@ -800,6 +955,11 @@ private struct SessionComposerPanel: View {
         .overlay {
             RoundedRectangle(cornerRadius: HermesTheme.panelCornerRadius, style: .continuous)
                 .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
+        }
+        .task(id: appState.activeConnectionID) {
+            guard appState.activeConnectionID != nil else { return }
+            guard appState.skills.isEmpty, !appState.isLoadingSkills else { return }
+            await appState.loadSkills(reset: false)
         }
     }
 
@@ -900,9 +1060,13 @@ private struct SessionComposerPanel: View {
 
     private var controlCluster: some View {
         HStack(spacing: 8) {
-            ViewThatFits(in: .horizontal) {
-                autoApproveToggle
-                compactAutoApproveToggle
+            skillInsertMenu
+
+            if showsAutoApprove {
+                ViewThatFits(in: .horizontal) {
+                    autoApproveToggle
+                    compactAutoApproveToggle
+                }
             }
 
             Button {
@@ -928,6 +1092,44 @@ private struct SessionComposerPanel: View {
             .help(L10n.string("Send with Command-Return"))
             .accessibilityLabel(L10n.string("Send"))
         }
+    }
+
+    private var skillInsertMenu: some View {
+        Menu {
+            if appState.isLoadingSkills {
+                Text(L10n.string("Loading skills…"))
+            } else if appState.skills.isEmpty {
+                Button(L10n.string("Refresh Skills")) {
+                    Task {
+                        await appState.loadSkills(reset: false)
+                    }
+                }
+
+                if let skillsError = appState.skillsError, !skillsError.isEmpty {
+                    Text(skillsError)
+                }
+            } else {
+                ForEach(appState.skills) { skill in
+                    Button {
+                        insertSkillCommand(skill)
+                    } label: {
+                        if let category = skill.category, !category.isEmpty {
+                            Text("\(skill.resolvedName) (\(category))")
+                        } else {
+                            Text(skill.resolvedName)
+                        }
+                    }
+                }
+            }
+        } label: {
+            Label(L10n.string("Insert Skill"), systemImage: "plus")
+                .labelStyle(.iconOnly)
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize(horizontal: true, vertical: false)
+        .help(L10n.string("Insert a skill command into the prompt"))
+        .accessibilityLabel(L10n.string("Insert Skill"))
+        .disabled(isSending)
     }
 
     private var autoApproveToggle: some View {
@@ -976,6 +1178,23 @@ private struct SessionComposerPanel: View {
         DispatchQueue.main.async {
             isEditorFocused = true
         }
+    }
+
+    private func insertSkillCommand(_ skill: SkillSummary) {
+        let command = "/\(skill.slug)"
+        let normalizedDraft = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedDraft.contains(command) else {
+            expandEditor()
+            return
+        }
+
+        if normalizedDraft.isEmpty {
+            draft = "\(command) "
+        } else {
+            draft = "\(command)\n\(normalizedDraft)"
+        }
+
+        expandEditor()
     }
 
     private func preserveEditorFocusAfterLayoutChange() {
@@ -1146,6 +1365,318 @@ private final class PlaceholderCommandTextView: NSTextView {
     }
 }
 
+private struct SessionPromptCardView: View {
+    let card: HermesPromptCard
+    let isDisabled: Bool
+    let onRespond: (HermesPromptCard, HermesPromptResponse) async -> Void
+
+    @State private var draft = ""
+    @State private var isSubmitting = false
+
+    var body: some View {
+        HermesInsetSurface {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: iconName)
+                        .foregroundStyle(iconColor)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(card.title)
+                            .font(.subheadline.weight(.semibold))
+
+                        if !card.message.isEmpty {
+                            Text(card.message)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .textSelection(.enabled)
+                        }
+                    }
+
+                    Spacer()
+                }
+
+                if card.toolName != nil || card.actionText != nil || card.previewText != nil {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let toolName = card.toolName {
+                            promptContextRow(label: L10n.string("Tool"), value: toolName, isMonospaced: false)
+                        }
+
+                        if let actionText = card.actionText {
+                            promptContextRow(label: L10n.string("Action"), value: actionText, isMonospaced: false)
+                        }
+
+                        if let previewText = card.previewText {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(L10n.string("Preview"))
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+
+                                ScrollView {
+                                    Text(previewText)
+                                        .font(.caption.monospaced())
+                                        .textSelection(.enabled)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(10)
+                                }
+                                .frame(maxHeight: 120)
+                                .background(HermesTheme.insetFill, in: RoundedRectangle(cornerRadius: HermesTheme.insetCornerRadius, style: .continuous))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: HermesTheme.insetCornerRadius, style: .continuous)
+                                        .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                switch card.kind {
+                case .approval:
+                    HStack(spacing: 8) {
+                        Button(L10n.string("Approve")) {
+                            submitApproval(true)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(isDisabled || isSubmitting)
+
+                        Button(L10n.string("Deny")) {
+                            submitApproval(false)
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(isDisabled || isSubmitting)
+                    }
+                case .clarify, .sudo, .secret:
+                    HStack(spacing: 8) {
+                        inputField
+
+                        Button(L10n.string("Send")) {
+                            submitText()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(isDisabled || isSubmitting || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }
+            }
+        }
+    }
+
+    private func promptContextRow(label: String, value: String, isMonospaced: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            Text(value)
+                .font(isMonospaced ? .caption.monospaced() : .caption)
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    @ViewBuilder
+    private var inputField: some View {
+        if card.kind == .clarify {
+            TextField(card.placeholder ?? L10n.string("Reply"), text: $draft, axis: .vertical)
+                .textFieldStyle(.roundedBorder)
+                .disabled(isDisabled || isSubmitting)
+        } else {
+            SecureField(card.placeholder ?? L10n.string("Required"), text: $draft)
+                .textFieldStyle(.roundedBorder)
+                .disabled(isDisabled || isSubmitting)
+        }
+    }
+
+    private var iconName: String {
+        switch card.kind {
+        case .approval:
+            return "checkmark.shield"
+        case .clarify:
+            return "text.bubble"
+        case .sudo:
+            return "lock.shield"
+        case .secret:
+            return "key.horizontal"
+        }
+    }
+
+    private var iconColor: Color {
+        switch card.kind {
+        case .approval:
+            return .orange
+        case .clarify:
+            return .blue
+        case .sudo, .secret:
+            return .purple
+        }
+    }
+
+    private func submitApproval(_ approved: Bool) {
+        guard !isDisabled, !isSubmitting else { return }
+        isSubmitting = true
+        Task {
+            await onRespond(card, .approval(approved))
+            await MainActor.run {
+                isSubmitting = false
+            }
+        }
+    }
+
+    private func submitText() {
+        let trimmedDraft = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedDraft.isEmpty, !isDisabled, !isSubmitting else { return }
+        isSubmitting = true
+        Task {
+            await onRespond(card, .text(trimmedDraft))
+            await MainActor.run {
+                draft = ""
+                isSubmitting = false
+            }
+        }
+    }
+}
+
+private struct SessionCompactionNoticeView: View {
+    let notice: SessionCompactionNotice
+
+    var body: some View {
+        HermesInsetSurface {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Image(systemName: "arrow.triangle.branch")
+                    .foregroundStyle(.orange)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L10n.string("Conversation compacted"))
+                        .font(.subheadline.weight(.semibold))
+
+                    Text(L10n.string("Hermes compacted this conversation into a new session. This session is now closed. Open the new session from the history list to continue."))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("\(notice.sourceSessionID) -> \(notice.targetSessionID)")
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+
+                Spacer(minLength: 0)
+            }
+        }
+    }
+}
+
+private struct SessionToolActivityTickerView: View {
+    let card: HermesToolActivityCard
+
+    var body: some View {
+        HermesInsetSurface {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(tint.opacity(0.14))
+                        .frame(width: 28, height: 28)
+
+                    Image(systemName: iconName)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(tint)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(card.title)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+
+                    Text(card.detail ?? card.status)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 0)
+
+                Text(statusLabel)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(tint)
+            }
+        }
+    }
+
+    private var normalizedStatus: String {
+        card.status.lowercased()
+    }
+
+    private var tint: Color {
+        if card.isRunning {
+            return .orange
+        }
+        if normalizedStatus.contains("error") || normalizedStatus.contains("fail") {
+            return .red
+        }
+        return Color(red: 0.0, green: 0.58, blue: 0.22)
+    }
+
+    private var iconName: String {
+        if card.isRunning {
+            return "hammer.circle.fill"
+        }
+        if normalizedStatus.contains("error") || normalizedStatus.contains("fail") {
+            return "xmark.circle.fill"
+        }
+        return "checkmark.circle.fill"
+    }
+
+    private var statusLabel: String {
+        if card.isRunning {
+            return L10n.string("Running")
+        }
+        if normalizedStatus.contains("error") || normalizedStatus.contains("fail") {
+            return L10n.string("Error")
+        }
+        return L10n.string("Done")
+    }
+}
+
+private struct SessionToolActivityCardView: View {
+    let card: HermesToolActivityCard
+
+    var body: some View {
+        HermesInsetSurface {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .center, spacing: 10) {
+                    Image(systemName: card.isRunning ? "hammer.circle.fill" : "hammer.circle")
+                        .foregroundStyle(card.isRunning ? Color.accentColor : .secondary)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(card.title)
+                            .font(.subheadline.weight(.semibold))
+
+                        Text(card.status)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    if card.isRunning {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+                }
+
+                if let detail = card.detail,
+                   !detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                }
+            }
+        }
+    }
+}
+
 private struct PendingSessionTurnView: View {
     let turn: PendingSessionTurn
     let showPrompt: Bool
@@ -1285,10 +1816,18 @@ private struct ConversationMessageCard: View {
                 }
 
                 if let content = message.content, !content.isEmpty {
-                    Text(content)
+                    Text(message.isStreaming ? content + "▍" : content)
                         .font(.callout)
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                } else if message.isStreaming && message.role == .assistant {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .controlSize(.small)
+
+                        Text(L10n.string("Hermes is thinking…"))
+                            .foregroundStyle(.secondary)
+                    }
                 } else {
                     Text(L10n.string("No text payload"))
                         .foregroundStyle(.secondary)

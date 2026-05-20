@@ -129,6 +129,9 @@ struct RootView: View {
             .onChange(of: appState.selectedSection) { _, _ in
                 ensureWorkspaceSidebarVisibleForCurrentSection()
             }
+            .onChange(of: appState.sessionTUITerminal?.id) { _, _ in
+                ensureWorkspaceSidebarVisibleForCurrentSection()
+            }
     }
 
     @ViewBuilder
@@ -174,17 +177,29 @@ struct RootView: View {
     }
 
     private var isWorkspaceSidebarCollapseEnabled: Bool {
-        appState.selectedSection != .terminal
+        appState.selectedSection != .terminal && !isSessionTUIVisible
     }
 
     private var workspaceSidebarCollapseHelp: String {
         if !isWorkspaceSidebarCollapseEnabled {
+            if isSessionTUIVisible {
+                return L10n.string("Workspace Sidebar is locked while Chat TUI is active")
+            }
             return L10n.string("Workspace Sidebar is always visible in Terminal")
         }
 
         return isWorkspaceSidebarCollapsed
             ? L10n.string("Show Workspace Sidebar")
             : L10n.string("Hide Workspace Sidebar")
+    }
+
+    private var isSessionTUIVisible: Bool {
+        guard appState.selectedSection == .sessions,
+              let terminal = appState.sessionTUITerminal else {
+            return false
+        }
+
+        return terminal.terminalSession.exitCode == nil
     }
 
     private var currentWorkbenchPrimaryColumnLayout: Binding<HermesSplitLayout>? {

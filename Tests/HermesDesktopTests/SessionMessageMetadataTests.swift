@@ -85,6 +85,23 @@ struct SessionMessageMetadataTests {
         #expect(display.content == content)
     }
 
+    @Test
+    func liveToolSummaryCanBeBuiltWithoutStructuredJSON() {
+        let summary = SessionToolMessageSummary(
+            title: "exec_command",
+            preview: "Running tests",
+            statusText: "Running",
+            statusKind: .neutral
+        )
+
+        #expect(summary.title == "exec_command")
+        #expect(summary.preview == "Running tests")
+        #expect(summary.statusText == "Running")
+        #expect(summary.statusKind == .neutral)
+        #expect(summary.sizeText == nil)
+        #expect(summary.isDetailPreviewTruncated == false)
+    }
+
     private func decodeMessage(_ json: String) throws -> SessionMessage {
         try JSONDecoder().decode(SessionMessage.self, from: Data(json.utf8))
     }

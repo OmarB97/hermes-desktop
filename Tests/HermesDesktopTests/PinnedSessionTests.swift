@@ -13,6 +13,7 @@ struct PinnedSessionTests {
             id: "session-123",
             title: "Launch follow-up",
             model: "gpt-5.2",
+            parentSessionID: "session-122",
             startedAt: startedAt,
             lastActive: lastActive,
             messageCount: 18,
@@ -30,6 +31,7 @@ struct PinnedSessionTests {
         #expect(pinnedSession.workspaceScopeFingerprint == "host-workspace")
         #expect(pinnedSession.createdAt == createdAt)
         #expect(pinnedSession.updatedAt == updatedAt)
+        #expect(pinnedSession.parentSessionID == "session-122")
         #expect(pinnedSession.summary == summary)
     }
 }

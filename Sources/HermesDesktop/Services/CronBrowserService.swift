@@ -17,7 +17,7 @@ final class CronBrowserService: @unchecked Sendable {
         )
         let result = try await sshTransport.execute(
             on: connection,
-            remoteCommand: "python3 -",
+            remoteCommand: connection.remoteServiceCommand("python3 -"),
             standardInput: Data(script.utf8),
             allocateTTY: false
         )
@@ -32,7 +32,7 @@ final class CronBrowserService: @unchecked Sendable {
             return try makeDecoder().decode(CronJobListResponse.self, from: data).jobs
         } catch {
             throw SSHTransportError.invalidResponse(
-                "Failed to decode remote cron metadata: \(error.localizedDescription)\n\n\(result.stdout)"
+                "Failed to decode remote cron metadata: \(describeDecodingError(error))\n\n\(result.stdout)"
             )
         }
     }
@@ -139,6 +139,30 @@ final class CronBrowserService: @unchecked Sendable {
         return decoder
     }
 
+    private func describeDecodingError(_ error: Error) -> String {
+        guard let decodingError = error as? DecodingError else {
+            return error.localizedDescription
+        }
+
+        func pathDescription(_ path: [any CodingKey]) -> String {
+            path.map(\.stringValue).joined(separator: ".")
+        }
+
+        switch decodingError {
+        case .dataCorrupted(let context):
+            let path = pathDescription(context.codingPath)
+            return path.isEmpty ? context.debugDescription : "\(path): \(context.debugDescription)"
+        case .keyNotFound(let key, let context):
+            let path = pathDescription(context.codingPath + [key])
+            return "\(path): missing required key"
+        case .typeMismatch(_, let context), .valueNotFound(_, let context):
+            let path = pathDescription(context.codingPath)
+            return path.isEmpty ? context.debugDescription : "\(path): \(context.debugDescription)"
+        @unknown default:
+            return error.localizedDescription
+        }
+    }
+
     private var listJobsBody: String {
         """
         import json
@@ -193,14 +217,22 @@ final class CronBrowserService: @unchecked Sendable {
             if value is None:
                 return None
             if isinstance(value, (int, float)):
-                return datetime.fromtimestamp(float(value), tz=timezone.utc).isoformat()
+                return datetime.fromtimestamp(float(value), tz=timezone.utc).isoformat(timespec="seconds")
 
             text = normalize_text(value)
             if text is None:
                 return None
 
             try:
-                return datetime.fromtimestamp(float(text), tz=timezone.utc).isoformat()
+                return datetime.fromtimestamp(float(text), tz=timezone.utc).isoformat(timespec="seconds")
+            except Exception:
+                pass
+
+            try:
+                parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+                if parsed.tzinfo is not None:
+                    parsed = parsed.astimezone(timezone.utc)
+                return parsed.isoformat(timespec="seconds")
             except Exception:
                 return text
 

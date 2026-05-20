@@ -153,9 +153,9 @@ struct WorkflowsView: View {
                     workflowToDelete = selectedWorkflow
                     showDeleteConfirmation = true
                 },
-                onRun: {
+                onRun: { destination in
                     guard let selectedWorkflow else { return }
-                    Task { await appState.runWorkflow(selectedWorkflow) }
+                    Task { await appState.runWorkflow(selectedWorkflow, destination: destination) }
                 }
             )
         }
@@ -333,7 +333,7 @@ private struct WorkflowDetailView: View {
     let onCreate: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
-    let onRun: () -> Void
+    let onRun: (WorkflowRunDestination) -> Void
 
     var body: some View {
         if let workflow {
@@ -380,8 +380,20 @@ private struct WorkflowDetailView: View {
                             }
 
                             HStack(spacing: 10) {
-                                Button(L10n.string("Run Workflow")) {
-                                    onRun()
+                                Menu {
+                                    Button {
+                                        onRun(.terminal)
+                                    } label: {
+                                        Label(L10n.string("Run in terminal"), systemImage: "terminal")
+                                    }
+
+                                    Button {
+                                        onRun(.chat)
+                                    } label: {
+                                        Label(L10n.string("Run in chat"), systemImage: "bubble.left.and.bubble.right")
+                                    }
+                                } label: {
+                                    Label(L10n.string("Run Workflow"), systemImage: "play.fill")
                                 }
                                 .buttonStyle(.borderedProminent)
                                 .disabled(!missingSkills.isEmpty)

@@ -137,6 +137,9 @@ struct SSHTransportTests {
             )
             Issue.record("Expected JSON decoding to fail")
         } catch let error as SSHTransportError {
+            let invocation = try #require(await runner.lastInvocation)
+            #expect(invocation.arguments.contains(connection.remoteServiceCommand("python3 -")))
+
             guard case .invalidResponse(let message) = error else {
                 Issue.record("Expected invalidResponse, got \(error)")
                 return

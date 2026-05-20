@@ -158,6 +158,7 @@ final class SessionBrowserService: @unchecked Sendable {
                         "id": session_id,
                         "title": title,
                         "model": model,
+                        "parent_session_id": stringify(record.get(context["session_parent_column"])) if context["session_parent_column"] else None,
                         "started_at": normalize_json_value(record.get(context["session_started_column"])),
                         "last_active": normalize_json_value(last_active),
                         "message_count": message_count,
@@ -823,6 +824,7 @@ final class SessionBrowserService: @unchecked Sendable {
                 preview = None
                 title = None
                 model = None
+                parent_session_id = None
                 match_count = 0
                 best_match = None
 
@@ -843,6 +845,12 @@ final class SessionBrowserService: @unchecked Sendable {
 
                             role = stringify(record.get("role"))
                             if role == "session_meta":
+                                if parent_session_id is None:
+                                    parent_session_id = stringify(
+                                        record.get("parent_session_id")
+                                        or record.get("parent_id")
+                                        or record.get("parentSessionId")
+                                    )
                                 continue
 
                             if model is None:
@@ -881,6 +889,7 @@ final class SessionBrowserService: @unchecked Sendable {
                     "id": path.stem,
                     "title": title or path.stem,
                     "model": model,
+                    "parent_session_id": parent_session_id,
                     "started_at": normalize_json_value(started_at),
                     "last_active": normalize_json_value(last_active or path.stat().st_mtime),
                     "message_count": message_count,

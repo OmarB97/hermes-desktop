@@ -6,6 +6,7 @@ struct SessionsView: View {
     @Binding var splitLayout: HermesSplitLayout
     let isActive: Bool
     @State private var searchText = ""
+    @State private var sessionToDelete: SessionSummary?
 
     var body: some View {
         HermesCollapsibleHSplitView(layout: $splitLayout, detailMinWidth: 420) {
@@ -31,15 +32,19 @@ struct SessionsView: View {
             .padding(.vertical, 20)
         } detail: {
             SessionDetailView(
+                connection: appState.activeConnection,
                 session: selectedSession,
                 messages: appState.sessionMessageDisplays,
                 errorMessage: appState.sessionsError,
-                conversationError: appState.sessionConversationError,
-                isSendingMessage: appState.isSendingSessionMessage,
                 isDeletingSession: selectedSession.map { selectedSession in
                     appState.isDeletingSession && appState.selectedSessionID == selectedSession.id
                 } ?? false,
-                pendingTurn: appState.pendingSessionTurn,
+                isSessionPinned: selectedSession.map { appState.isSessionPinned($0.id) } ?? false,
+                sessionCompactionNotice: appState.sessionCompactionNotice,
+                mode: appState.selectedSessionDetailMode,
+                terminal: appState.sessionTUITerminal,
+                terminalTheme: appState.connectionStore.terminalTheme,
+                terminalAppearance: appState.connectionStore.terminalTheme.resolvedAppearance,
                 isActive: isActive,
                 savedScrollOffset: selectedSession.flatMap { selectedSession in
                     appState.savedSessionScrollOffset(for: selectedSession.id)
@@ -53,17 +58,20 @@ struct SessionsView: View {
                 onDeleteSession: { session in
                     await appState.deleteSession(session)
                 },
-                onStartSession: { prompt, autoApproveCommands in
-                    await appState.startNewSession(
-                        with: prompt,
-                        autoApproveCommands: autoApproveCommands
-                    )
+                onToggleSessionPin: { session in
+                    appState.toggleSessionPin(session)
                 },
-                onSendMessage: { prompt, autoApproveCommands in
-                    await appState.sendMessageToSelectedSession(
-                        prompt,
-                        autoApproveCommands: autoApproveCommands
-                    )
+                onModeChange: { mode in
+                    appState.setSessionDetailMode(mode)
+                },
+                onStartChat: {
+                    appState.startSelectedSessionChat()
+                },
+                onUpdateTerminalTheme: { newValue in
+                    appState.connectionStore.terminalTheme = newValue
+                },
+                onTerminalExitRefresh: {
+                    await appState.refreshSessionsAfterChat()
                 }
             )
             .hermesSplitDetailColumn(minWidth: 420, idealWidth: 520)
@@ -86,6 +94,19 @@ struct SessionsView: View {
             guard !Task.isCancelled else { return }
             await appState.loadSessions(reset: true, query: searchText)
         }
+        .alert(L10n.string("Delete this session?"), isPresented: deleteConfirmationBinding, presenting: sessionToDelete) { session in
+            Button(L10n.string("Delete"), role: .destructive) {
+                Task {
+                    await appState.deleteSession(session)
+                }
+            }
+            Button(L10n.string("Cancel"), role: .cancel) {}
+        } message: { session in
+            Text(L10n.string(
+                "“%@” will be removed from Hermes Desktop and deleted on the remote Hermes host as well. This action cannot be undone.",
+                session.resolvedTitle
+            ))
+        }
     }
 
     private var sessionsLoadTaskID: String {
@@ -94,6 +115,16 @@ struct SessionsView: View {
 
     private var searchTaskID: String {
         "\(isActive):\(searchText)"
+    }
+
+    private var deleteConfirmationBinding: Binding<Bool> {
+        Binding {
+            sessionToDelete != nil
+        } set: { isPresented in
+            if !isPresented {
+                sessionToDelete = nil
+            }
+        }
     }
 
     @ViewBuilder
@@ -220,6 +251,9 @@ struct SessionsView: View {
             isPinned: isPinned,
             onTogglePin: {
                 appState.toggleSessionPin(session)
+            },
+            onDelete: {
+                sessionToDelete = session
             }
         ) {
             Task {
@@ -235,9 +269,8 @@ struct SessionsView: View {
         HStack(spacing: 10) {
             HermesCreateActionButton("New Chat") {
                 searchText = ""
-                appState.prepareNewSessionComposer()
+                appState.startNewSessionChat()
             }
-            .disabled(appState.isSendingSessionMessage)
         }
         .fixedSize(horizontal: true, vertical: false)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -278,6 +311,7 @@ private struct SessionCardRow: View {
     let isSelected: Bool
     let isPinned: Bool
     let onTogglePin: () -> Void
+    let onDelete: () -> Void
     let onSelect: () -> Void
 
     @State private var isHovering = false
@@ -302,7 +336,10 @@ private struct SessionCardRow: View {
         .buttonStyle(.plain)
         .overlay(alignment: .topTrailing) {
             if isPinned || isSelected || isHovering {
-                pinButton
+                VStack(spacing: 6) {
+                    pinButton
+                    deleteButton
+                }
                     .padding(.top, 10)
                     .padding(.trailing, 14)
                     .transition(.opacity)
@@ -311,6 +348,7 @@ private struct SessionCardRow: View {
         .onHover { isHovering = $0 }
         .contextMenu {
             Button(pinHelpText, action: onTogglePin)
+            Button(L10n.string("Delete session"), role: .destructive, action: onDelete)
 
             Button(L10n.string("Copy Session ID")) {
                 NSPasteboard.general.clearContents()
@@ -334,6 +372,23 @@ private struct SessionCardRow: View {
         .buttonStyle(.plain)
         .help(pinHelpText)
         .accessibilityLabel(pinHelpText)
+    }
+
+    private var deleteButton: some View {
+        Button(action: onDelete) {
+            Image(systemName: "trash")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.red)
+                .frame(width: 24, height: 24)
+                .background(
+                    Circle()
+                        .fill(Color.red.opacity(0.12))
+                )
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .help(L10n.string("Delete session"))
+        .accessibilityLabel(L10n.string("Delete session"))
     }
 
     private var content: some View {

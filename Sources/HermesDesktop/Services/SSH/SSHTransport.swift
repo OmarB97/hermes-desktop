@@ -84,7 +84,7 @@ final class SSHTransport: @unchecked Sendable {
     ) async throws -> Response {
         let result = try await execute(
             on: connection,
-            remoteCommand: "python3 -",
+            remoteCommand: connection.remoteServiceCommand("python3 -"),
             standardInput: Data(pythonScript.utf8),
             allocateTTY: false
         )

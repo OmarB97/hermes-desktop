@@ -16,6 +16,7 @@ struct SessionSummary: Codable, Identifiable, Hashable, Sendable, TitleIdentifia
     let id: String
     let title: String?
     let model: String?
+    let parentSessionID: String?
     let startedAt: SessionTimestamp?
     let lastActive: SessionTimestamp?
     let messageCount: Int?
@@ -26,6 +27,7 @@ struct SessionSummary: Codable, Identifiable, Hashable, Sendable, TitleIdentifia
         case id
         case title
         case model
+        case parentSessionID = "parent_session_id"
         case startedAt = "started_at"
         case lastActive = "last_active"
         case messageCount = "message_count"
@@ -37,6 +39,7 @@ struct SessionSummary: Codable, Identifiable, Hashable, Sendable, TitleIdentifia
         id: String,
         title: String?,
         model: String?,
+        parentSessionID: String? = nil,
         startedAt: SessionTimestamp?,
         lastActive: SessionTimestamp?,
         messageCount: Int?,
@@ -46,6 +49,7 @@ struct SessionSummary: Codable, Identifiable, Hashable, Sendable, TitleIdentifia
         self.id = id
         self.title = title
         self.model = model
+        self.parentSessionID = parentSessionID
         self.startedAt = startedAt
         self.lastActive = lastActive
         self.messageCount = messageCount
@@ -75,6 +79,7 @@ struct PinnedSession: Codable, Identifiable, Hashable, Sendable {
     let workspaceScopeFingerprint: String
     var title: String?
     var model: String?
+    var parentSessionID: String?
     var startedAt: SessionTimestamp?
     var lastActive: SessionTimestamp?
     var messageCount: Int?
@@ -92,6 +97,7 @@ struct PinnedSession: Codable, Identifiable, Hashable, Sendable {
         self.workspaceScopeFingerprint = workspaceScopeFingerprint
         self.title = session.title
         self.model = session.model
+        self.parentSessionID = session.parentSessionID
         self.startedAt = session.startedAt
         self.lastActive = session.lastActive
         self.messageCount = session.messageCount
@@ -105,6 +111,7 @@ struct PinnedSession: Codable, Identifiable, Hashable, Sendable {
             id: id,
             title: title,
             model: model,
+            parentSessionID: parentSessionID,
             startedAt: startedAt,
             lastActive: lastActive,
             messageCount: messageCount,
@@ -131,6 +138,20 @@ struct SessionMessage: Codable, Identifiable, Hashable, Sendable {
         case content
         case timestamp
         case metadata
+    }
+
+    init(
+        id: String,
+        role: SessionMessageRole,
+        content: String?,
+        timestamp: SessionTimestamp? = nil,
+        metadata: [String: JSONValue]? = nil
+    ) {
+        self.id = id
+        self.role = role
+        self.content = content
+        self.timestamp = timestamp
+        self.metadata = metadata
     }
 
     init(from decoder: Decoder) throws {
@@ -160,6 +181,25 @@ struct SessionMessageDisplay: Identifiable, Hashable, Sendable {
     let timestampText: String?
     let metadataItems: [SessionMetadataDisplayItem]
     let toolSummary: SessionToolMessageSummary?
+    let isStreaming: Bool
+
+    init(
+        id: String,
+        role: SessionMessageRole,
+        content: String?,
+        timestampText: String? = nil,
+        metadataItems: [SessionMetadataDisplayItem] = [],
+        toolSummary: SessionToolMessageSummary? = nil,
+        isStreaming: Bool = false
+    ) {
+        self.id = id
+        self.role = role
+        self.content = content
+        self.timestampText = timestampText
+        self.metadataItems = metadataItems
+        self.toolSummary = toolSummary
+        self.isStreaming = isStreaming
+    }
 
     init(message: SessionMessage) {
         id = message.id
@@ -175,6 +215,7 @@ struct SessionMessageDisplay: Identifiable, Hashable, Sendable {
         toolSummary = message.role.isToolRole
             ? SessionToolMessageSummary(content: message.content)
             : nil
+        isStreaming = false
     }
 
     var isToolMessage: Bool {
@@ -251,6 +292,22 @@ struct SessionToolMessageSummary: Hashable, Sendable {
     private static let jsonParseByteLimit = 256 * 1024
     private static let collapsedPreviewCharacterLimit = 220
     static let detailPreviewCharacterLimit = 5_000
+
+    init(
+        title: String,
+        preview: String?,
+        statusText: String?,
+        statusKind: SessionToolStatusKind,
+        sizeText: String? = nil,
+        isDetailPreviewTruncated: Bool = false
+    ) {
+        self.title = title
+        self.preview = preview
+        self.statusText = statusText
+        self.statusKind = statusKind
+        self.sizeText = sizeText
+        self.isDetailPreviewTruncated = isDetailPreviewTruncated
+    }
 
     init(content: String?) {
         let byteCount = content?.utf8.count ?? 0
@@ -496,6 +553,10 @@ enum SessionMessageRole: Codable, Hashable, Sendable {
         case .assistant, .user, .system, .event:
             return false
         }
+    }
+
+    init(remoteValue: String) {
+        self = Self(decodedValue: remoteValue)
     }
 
     private init(decodedValue: String) {
