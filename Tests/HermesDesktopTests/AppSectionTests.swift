@@ -4,9 +4,9 @@ import Testing
 
 struct AppSectionTests {
     @Test
-    func navigationShortcutsStayStableAcrossAllSections() {
+    func navigationShortcutsStayStableAcrossCommandVisibleSections() {
+        #expect(AppSection.navigationCases == [.connections] + AppSection.customizableSidebarSections)
         #expect(AppSection.connections.navigationShortcutKey == "1")
-        #expect(AppSection.overview.navigationShortcutKey == "2")
         #expect(AppSection.sessions.navigationShortcutKey == "3")
         #expect(AppSection.workflows.navigationShortcutKey == "4")
         #expect(AppSection.cronjobs.navigationShortcutKey == "5")

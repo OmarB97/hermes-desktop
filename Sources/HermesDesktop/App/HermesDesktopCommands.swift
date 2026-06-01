@@ -14,7 +14,7 @@ struct HermesDesktopCommands: Commands {
                 appState.requestNewSessionFromCommand()
             }
             .keyboardShortcut("n", modifiers: [.command, .option])
-            .disabled(appState.activeConnection == nil || appState.isSendingSessionMessage)
+            .disabled(appState.activeConnection == nil)
 
             Button(L10n.string("New Terminal Tab")) {
                 appState.openNewTerminalTabFromCommand()

@@ -95,13 +95,13 @@ struct ConnectionsView: View {
             Text(deleteProfileConfirmationMessage)
         }
         .alert(
-            L10n.string("Stop tracing this profile?"),
+            L10n.string("Stop tracking this profile?"),
             isPresented: Binding(
                 get: { profilePendingStopTracking != nil },
                 set: { if !$0 { profilePendingStopTracking = nil } }
             )
         ) {
-            Button(L10n.string("Stop Tracing"), role: .destructive) {
+            Button(L10n.string("Stop Tracking"), role: .destructive) {
                 guard let profile = profilePendingStopTracking else { return }
                 profilePendingStopTracking = nil
                 Task {
@@ -989,7 +989,7 @@ private struct ManagedProfileRow: View {
                             .buttonStyle(.bordered)
                             .disabled(isBusy)
                     } else {
-                        Button(L10n.string("Stop Tracing"), role: .destructive, action: onStopTracking)
+                        Button(L10n.string("Stop Tracking"), role: .destructive, action: onStopTracking)
                             .buttonStyle(.bordered)
                             .disabled(isBusy)
                     }

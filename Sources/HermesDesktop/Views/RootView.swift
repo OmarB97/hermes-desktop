@@ -225,7 +225,7 @@ struct RootView: View {
             return $filesSplitLayout
         case .skills:
             return $skillsSplitLayout
-        case .connections, .overview, .usage, .terminal:
+        case .connections, .usage, .terminal:
             return nil
         }
     }
@@ -297,8 +297,6 @@ struct RootView: View {
         switch appState.selectedSection {
         case .connections:
             ConnectionsView()
-        case .overview:
-            OverviewView()
         case .files:
             FilesView(splitLayout: $filesSplitLayout)
         case .sessions:

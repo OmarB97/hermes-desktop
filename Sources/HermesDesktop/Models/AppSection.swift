@@ -3,7 +3,6 @@ import SwiftUI
 
 enum AppSection: String, CaseIterable, Codable, Identifiable {
     case connections
-    case overview
     case files
     case sessions
     case workflows
@@ -16,7 +15,7 @@ enum AppSection: String, CaseIterable, Codable, Identifiable {
     var id: String { rawValue }
 
     static var navigationCases: [AppSection] {
-        [.connections, .sessions, .workflows, .cronjobs, .kanban, .files, .usage, .skills, .terminal]
+        [.connections] + customizableSidebarSections
     }
 
     static var customizableSidebarSections: [AppSection] {
@@ -31,8 +30,6 @@ enum AppSection: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .connections:
             "Settings"
-        case .overview:
-            "Overview"
         case .files:
             "Files"
         case .sessions:
@@ -56,8 +53,6 @@ enum AppSection: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .connections:
             "gearshape"
-        case .overview:
-            "waveform.path.ecg"
         case .files:
             "doc.text"
         case .sessions:
@@ -81,8 +76,6 @@ enum AppSection: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .connections:
             return "1"
-        case .overview:
-            return "2"
         case .sessions:
             return "3"
         case .workflows:
