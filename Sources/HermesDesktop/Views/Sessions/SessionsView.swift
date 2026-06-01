@@ -9,7 +9,11 @@ struct SessionsView: View {
     @State private var sessionToDelete: SessionSummary?
 
     var body: some View {
-        HermesCollapsibleHSplitView(layout: $splitLayout, detailMinWidth: 420) {
+        HermesCollapsibleHSplitView(
+            layout: $splitLayout,
+            detailMinWidth: 420,
+            usesTransition: !isSessionChatTerminalVisible
+        ) {
             VStack(alignment: .leading, spacing: 18) {
                 HermesPageHeader(
                     title: "Sessions",
@@ -119,6 +123,17 @@ struct SessionsView: View {
 
     private var searchTaskID: String {
         "\(isActive):\(searchText)"
+    }
+
+    private var isSessionChatTerminalVisible: Bool {
+        guard isActive,
+              appState.selectedSessionDetailMode == .chat,
+              let terminal = appState.sessionTUITerminal,
+              let connection = appState.activeConnection else {
+            return false
+        }
+
+        return terminal.matches(sessionID: selectedSession?.id, connection: connection)
     }
 
     private var deleteConfirmationBinding: Binding<Bool> {

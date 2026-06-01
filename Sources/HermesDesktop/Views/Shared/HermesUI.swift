@@ -858,6 +858,7 @@ struct HermesWindowTitleBarConfigurator: NSViewRepresentable {
 struct HermesCollapsibleHSplitView<Primary: View, Detail: View>: View {
     @Binding var layout: HermesSplitLayout
     let detailMinWidth: CGFloat
+    let usesTransition: Bool
     let primary: Primary
     let detail: Detail
     private let collapseAnimation = Animation.snappy(duration: 0.16, extraBounce: 0)
@@ -865,11 +866,13 @@ struct HermesCollapsibleHSplitView<Primary: View, Detail: View>: View {
     init(
         layout: Binding<HermesSplitLayout>,
         detailMinWidth: CGFloat,
+        usesTransition: Bool = true,
         @ViewBuilder primary: () -> Primary,
         @ViewBuilder detail: () -> Detail
     ) {
         self._layout = layout
         self.detailMinWidth = detailMinWidth
+        self.usesTransition = usesTransition
         self.primary = primary()
         self.detail = detail()
     }
@@ -879,18 +882,18 @@ struct HermesCollapsibleHSplitView<Primary: View, Detail: View>: View {
             if layout.isPrimaryCollapsed {
                 detail
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .transition(.opacity)
+                    .transition(usesTransition ? .opacity : .identity)
             } else {
                 HermesPersistentHSplitView(layout: $layout, detailMinWidth: detailMinWidth) {
                     primary
                 } detail: {
                     detail
                 }
-                .transition(.opacity)
+                .transition(usesTransition ? .opacity : .identity)
             }
         }
         .clipped()
-        .animation(collapseAnimation, value: layout.isPrimaryCollapsed)
+        .animation(usesTransition ? collapseAnimation : nil, value: layout.isPrimaryCollapsed)
     }
 }
 
