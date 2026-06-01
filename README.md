@@ -98,7 +98,7 @@ Hermes also has an official web dashboard. The two tools are complementary.
 
 Use the dashboard when you want a browser-based management surface for the
 installation: configuration, API keys, logs, sessions, analytics, cron jobs,
-skills, and browser chat.
+skills, and web chat.
 
 Use Hermes Desktop when you want to work close to the host from your Mac:
 sessions, workflows, Kanban, remote files, editable skills, usage, cron jobs,
