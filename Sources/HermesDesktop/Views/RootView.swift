@@ -133,6 +133,9 @@ struct RootView: View {
             .onChange(of: appState.selectedSection) { _, _ in
                 ensureWorkspaceSidebarVisibleForCurrentSection()
             }
+            .onChange(of: appState.connectionStore.visibleSidebarSections) { _, _ in
+                ensureSelectedSectionAvailable()
+            }
             .onChange(of: appState.sessionTUITerminal?.id) { _, _ in
                 ensureWorkspaceSidebarVisibleForCurrentSection()
             }
@@ -241,11 +244,16 @@ struct RootView: View {
         workspaceSidebarSplitLayout.wrappedValue.isPrimaryCollapsed = false
     }
 
+    private func ensureSelectedSectionAvailable() {
+        guard !availableSections.contains(appState.selectedSection) else { return }
+        appState.requestSectionSelection(.connections)
+    }
+
     private var availableSections: [AppSection] {
         if appState.activeConnection == nil {
             return [.connections]
         }
-        return [.connections, .sessions, .workflows, .cronjobs, .kanban, .files, .usage, .skills, .terminal]
+        return [.connections] + appState.connectionStore.visibleSidebarSections
     }
 
     private var sectionSelection: Binding<AppSection?> {

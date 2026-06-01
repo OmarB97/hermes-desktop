@@ -194,6 +194,20 @@ struct ConnectionsView: View {
 
                 Divider()
 
+                SidebarCustomizationPanel(
+                    sections: appState.connectionStore.sidebarSectionOrder,
+                    isVisible: { appState.connectionStore.isSidebarSectionVisible($0) },
+                    canMoveUp: canMoveSidebarSectionUp,
+                    canMoveDown: canMoveSidebarSectionDown,
+                    setVisible: { section, isVisible in
+                        appState.connectionStore.setSidebarSection(section, isVisible: isVisible)
+                    },
+                    moveUp: { appState.connectionStore.moveSidebarSection($0, direction: .up) },
+                    moveDown: { appState.connectionStore.moveSidebarSection($0, direction: .down) }
+                )
+
+                Divider()
+
                 TerminalAppearanceEditor(
                     themePreference: terminalThemeBinding,
                     fontSize: terminalFontSizeBinding,
@@ -321,23 +335,7 @@ struct ConnectionsView: View {
     private var diagnosticsOverview: some View {
         VStack(alignment: .leading, spacing: 12) {
             if let activeConnection = appState.activeConnection {
-                Button {
-                    appState.testConnection(activeConnection)
-                } label: {
-                    Label(L10n.string("Test Connection"), systemImage: "waveform.path.ecg")
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(appState.isBusy)
-
-                Button {
-                    Task {
-                        await appState.refreshOverview(manual: true)
-                    }
-                } label: {
-                    Label(L10n.string("Run Diagnostics"), systemImage: "stethoscope")
-                }
-                .buttonStyle(.bordered)
-                .disabled(appState.isBusy || appState.isRefreshingOverview)
+                diagnosticsActionBar(activeConnection)
             }
 
             if let overviewError = appState.overviewError {
@@ -364,6 +362,33 @@ struct ConnectionsView: View {
                 )
             }
         }
+    }
+
+    private func diagnosticsActionBar(_ activeConnection: ConnectionProfile) -> some View {
+        HStack(spacing: 8) {
+            Button {
+                Task {
+                    await appState.refreshOverview(manual: true)
+                }
+            } label: {
+                Label(L10n.string("Run Diagnostics"), systemImage: "stethoscope")
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+            .disabled(appState.isBusy || appState.isRefreshingOverview)
+
+            Button {
+                appState.testConnection(activeConnection)
+            } label: {
+                Label(L10n.string("Test Connection"), systemImage: "waveform.path.ecg")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .disabled(appState.isBusy)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.top, 2)
     }
 
     private var helpFooter: some View {
@@ -478,6 +503,16 @@ struct ConnectionsView: View {
         } set: { newValue in
             appState.connectionStore.terminalFontSize = newValue
         }
+    }
+
+    private func canMoveSidebarSectionUp(_ section: AppSection) -> Bool {
+        guard let index = appState.connectionStore.sidebarSectionOrder.firstIndex(of: section) else { return false }
+        return index > appState.connectionStore.sidebarSectionOrder.startIndex
+    }
+
+    private func canMoveSidebarSectionDown(_ section: AppSection) -> Bool {
+        guard let index = appState.connectionStore.sidebarSectionOrder.firstIndex(of: section) else { return false }
+        return index < appState.connectionStore.sidebarSectionOrder.index(before: appState.connectionStore.sidebarSectionOrder.endIndex)
     }
 
     private var connectionHealthTitle: String {
@@ -634,6 +669,98 @@ private struct SettingsControlRow<Control: View>: View {
 
             control
         }
+    }
+}
+
+private struct SidebarCustomizationPanel: View {
+    let sections: [AppSection]
+    let isVisible: (AppSection) -> Bool
+    let canMoveUp: (AppSection) -> Bool
+    let canMoveDown: (AppSection) -> Bool
+    let setVisible: (AppSection, Bool) -> Void
+    let moveUp: (AppSection) -> Void
+    let moveDown: (AppSection) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L10n.string("Sidebar"))
+                    .font(.headline)
+
+                Text(L10n.string("Choose which sections appear in the sidebar."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HermesInsetSurface {
+                VStack(spacing: 0) {
+                    ForEach(sections) { section in
+                        SidebarCustomizationRow(
+                            section: section,
+                            isVisible: Binding(
+                                get: { isVisible(section) },
+                                set: { setVisible(section, $0) }
+                            ),
+                            canMoveUp: canMoveUp(section),
+                            canMoveDown: canMoveDown(section),
+                            moveUp: { moveUp(section) },
+                            moveDown: { moveDown(section) }
+                        )
+
+                        if section.id != sections.last?.id {
+                            Divider()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct SidebarCustomizationRow: View {
+    let section: AppSection
+    @Binding var isVisible: Bool
+    let canMoveUp: Bool
+    let canMoveDown: Bool
+    let moveUp: () -> Void
+    let moveDown: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: section.systemImage)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 24)
+
+            Text(section.title)
+                .font(.subheadline.weight(.medium))
+
+            Spacer(minLength: 12)
+
+            HStack(spacing: 2) {
+                Button(action: moveUp) {
+                    Image(systemName: "chevron.up")
+                }
+                .disabled(!canMoveUp)
+                .help(L10n.string("Move Up"))
+
+                Button(action: moveDown) {
+                    Image(systemName: "chevron.down")
+                }
+                .disabled(!canMoveDown)
+                .help(L10n.string("Move Down"))
+            }
+            .buttonStyle(.borderless)
+            .controlSize(.small)
+
+            Toggle("", isOn: $isVisible)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .help(L10n.string("Show in Sidebar"))
+        }
+        .padding(.vertical, 7)
     }
 }
 

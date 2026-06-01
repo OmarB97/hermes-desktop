@@ -296,7 +296,7 @@ struct TerminalAppearanceEditor: View {
                 }
             }
 
-            TerminalThemePreviewCard(appearance: appearance)
+            TerminalThemePreviewCard(appearance: appearance, fontSize: fontSize)
 
             HermesInsetSurface {
                 VStack(alignment: .leading, spacing: 10) {
@@ -440,6 +440,11 @@ struct TerminalAppearanceEditor: View {
 
 private struct TerminalThemePreviewCard: View {
     let appearance: TerminalThemeAppearance
+    let fontSize: Double
+
+    private var previewFontSize: CGFloat {
+        CGFloat(TerminalFontPreference.clamped(fontSize))
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -458,6 +463,8 @@ private struct TerminalThemePreviewCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("hermes@host:~/workspace$")
                     .foregroundStyle(appearance.foregroundColor.swiftUIColor.opacity(0.72))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
 
                 Text("git status")
                     .foregroundStyle(appearance.foregroundColor.swiftUIColor)
@@ -472,9 +479,9 @@ private struct TerminalThemePreviewCard: View {
                 }
                 .font(.caption.weight(.semibold))
             }
-            .font(.system(.body, design: .monospaced))
+            .font(.system(size: previewFontSize, design: .monospaced))
             .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(appearance.backgroundColor.swiftUIColor)

@@ -60,6 +60,16 @@ final class ConnectionStore: ObservableObject {
             persistPreferencesIfNeeded()
         }
     }
+    @Published private(set) var sidebarSectionOrder: [AppSection] = AppSection.customizableSidebarSections {
+        didSet {
+            persistPreferencesIfNeeded()
+        }
+    }
+    @Published private(set) var hiddenSidebarSections: [AppSection] = [] {
+        didSet {
+            persistPreferencesIfNeeded()
+        }
+    }
 
     private let paths: AppPaths
     private let encoder = JSONEncoder()
@@ -236,6 +246,40 @@ final class ConnectionStore: ObservableObject {
         }
     }
 
+    var visibleSidebarSections: [AppSection] {
+        sidebarSectionOrder.filter { !hiddenSidebarSections.contains($0) }
+    }
+
+    func isSidebarSectionVisible(_ section: AppSection) -> Bool {
+        !hiddenSidebarSections.contains(section)
+    }
+
+    func setSidebarSection(_ section: AppSection, isVisible: Bool) {
+        guard AppSection.customizableSidebarSections.contains(section) else { return }
+        if isVisible {
+            hiddenSidebarSections = normalizedHiddenSidebarSections(
+                hiddenSidebarSections.filter { $0 != section }
+            )
+        } else if !hiddenSidebarSections.contains(section) {
+            hiddenSidebarSections = normalizedHiddenSidebarSections(hiddenSidebarSections + [section])
+        }
+    }
+
+    func moveSidebarSection(_ section: AppSection, direction: SidebarSectionMoveDirection) {
+        var updatedOrder = normalizedSidebarOrder(sidebarSectionOrder)
+        guard let index = updatedOrder.firstIndex(of: section) else { return }
+        let destinationIndex: Int
+        switch direction {
+        case .up:
+            destinationIndex = max(updatedOrder.startIndex, index - 1)
+        case .down:
+            destinationIndex = min(updatedOrder.index(before: updatedOrder.endIndex), index + 1)
+        }
+        guard destinationIndex != index else { return }
+        updatedOrder.swapAt(index, destinationIndex)
+        sidebarSectionOrder = updatedOrder
+    }
+
     private func load() {
         isHydratingFromDisk = true
         defer { isHydratingFromDisk = false }
@@ -258,18 +302,20 @@ final class ConnectionStore: ObservableObject {
     }
 
     private func savePreferences() {
-            let preferences = AppPreferences(
-                lastConnectionID: lastConnectionID,
-                terminalTheme: terminalTheme,
-                terminalFontSize: terminalFontSize,
-                appAppearance: appAppearance,
-                automaticallyChecksForUpdates: automaticallyChecksForUpdates,
-                lastAutomaticUpdateCheckAt: lastAutomaticUpdateCheckAt,
-                workspaceFileBookmarks: workspaceFileBookmarks,
-                pinnedSessions: pinnedSessions,
-                workflows: workflows,
-                hiddenHermesProfiles: hiddenHermesProfiles
-            )
+        let preferences = AppPreferences(
+            lastConnectionID: lastConnectionID,
+            terminalTheme: terminalTheme,
+            terminalFontSize: terminalFontSize,
+            appAppearance: appAppearance,
+            automaticallyChecksForUpdates: automaticallyChecksForUpdates,
+            lastAutomaticUpdateCheckAt: lastAutomaticUpdateCheckAt,
+            workspaceFileBookmarks: workspaceFileBookmarks,
+            pinnedSessions: pinnedSessions,
+            workflows: workflows,
+            hiddenHermesProfiles: hiddenHermesProfiles,
+            sidebarSectionOrder: sidebarSectionOrder,
+            hiddenSidebarSections: hiddenSidebarSections
+        )
 
         do {
             paths.ensureApplicationSupportDirectory()
@@ -331,7 +377,9 @@ final class ConnectionStore: ObservableObject {
                 workspaceFileBookmarks: [],
                 pinnedSessions: [],
                 workflows: [],
-                hiddenHermesProfiles: []
+                hiddenHermesProfiles: [],
+                sidebarSectionOrder: AppSection.customizableSidebarSections,
+                hiddenSidebarSections: []
             )
         )
     }
@@ -347,6 +395,8 @@ final class ConnectionStore: ObservableObject {
         pinnedSessions = preferences.pinnedSessions ?? []
         workflows = preferences.workflows ?? []
         hiddenHermesProfiles = preferences.hiddenHermesProfiles ?? []
+        sidebarSectionOrder = normalizedSidebarOrder(preferences.sidebarSectionOrder ?? AppSection.customizableSidebarSections)
+        hiddenSidebarSections = normalizedHiddenSidebarSections(preferences.hiddenSidebarSections ?? [])
     }
 
     private func reportPersistenceError(_ message: String) {
@@ -369,6 +419,32 @@ private struct AppPreferences: Codable {
     var pinnedSessions: [PinnedSession]?
     var workflows: [WorkflowPreset]?
     var hiddenHermesProfiles: [HiddenHermesProfilePreference]?
+    var sidebarSectionOrder: [AppSection]?
+    var hiddenSidebarSections: [AppSection]?
+}
+
+enum SidebarSectionMoveDirection {
+    case up
+    case down
+}
+
+private func normalizedSidebarOrder(_ sections: [AppSection]) -> [AppSection] {
+    var normalized = [AppSection]()
+    for section in sections where AppSection.customizableSidebarSections.contains(section) && !normalized.contains(section) {
+        normalized.append(section)
+    }
+    for section in AppSection.customizableSidebarSections where !normalized.contains(section) {
+        normalized.append(section)
+    }
+    return normalized
+}
+
+private func normalizedHiddenSidebarSections(_ sections: [AppSection]) -> [AppSection] {
+    var normalized = [AppSection]()
+    for section in sections where AppSection.customizableSidebarSections.contains(section) && !normalized.contains(section) {
+        normalized.append(section)
+    }
+    return normalized
 }
 
 private extension String {

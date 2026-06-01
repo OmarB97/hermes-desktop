@@ -129,61 +129,44 @@ struct ConnectionEditorSheet: View {
                     }
 
                     HermesSurfacePanel(
-                        title: "How Hermes Connects",
-                        subtitle: "The goal is to keep the profile understandable without hiding the technical model."
+                        title: "Connection Tips",
+                        subtitle: "Use the same SSH setup that works in Terminal."
                     ) {
-                        VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 10) {
                             ConnectionHintRow(
-                                title: "Preferred setup",
-                                detail: "Use an SSH alias when possible. It keeps the system SSH config as the source of truth."
+                                title: "SSH alias",
+                                detail: "Use an alias when you have one."
                             )
 
                             ConnectionHintRow(
                                 title: "Same Mac",
-                                detail: "If Hermes runs on this Mac, stay with the SSH model and use localhost, the local hostname, or a local SSH alias."
+                                detail: "Use localhost or a local SSH alias."
                             )
 
                             ConnectionHintRow(
                                 title: "Authentication",
-                                detail: "SSH must already work from this Mac without interactive prompts. Password login may still exist on the host, but Hermes Desktop expects keys, an SSH agent, or another non-interactive SSH path for the actual connection it uses."
+                                detail: "SSH should connect without prompts."
                             )
 
                             ConnectionHintRow(
-                                title: "Network path",
-                                detail: "The Mac and Hermes host do not need to be on the same Wi-Fi. Local network, public IP, VPN, or Tailscale all work as long as standard ssh from this Mac reaches the host."
+                                title: "Hermes profile",
+                                detail: "Leave empty for the default profile."
                             )
 
                             if draft.trimmedAlias != nil && draft.trimmedHost != nil {
                                 HermesInsetSurface {
-                                    Text(L10n.string("The SSH alias currently takes priority over Host. The Host value is preserved in the profile, but it will be ignored while the alias is present."))
+                                    Text(L10n.string("SSH alias is used before Host."))
                                         .font(.subheadline)
                                         .foregroundStyle(.orange)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
-                            } else {
-                            ConnectionHintRow(
-                                title: "Overrides",
-                                detail: "SSH user and port are optional. Leave them empty to keep the remote defaults."
-                            )
-                        }
-
-                        HermesInsetSurface {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(L10n.string("Hermes profile"))
-                                    .font(.headline)
-
-                                Text(L10n.string("Leave it empty for the default Hermes home at `~/.hermes`. Set a profile name like `researcher` to target `~/.hermes/profiles/researcher` on the same host."))
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
                             }
                         }
-                    }
                     }
 
                     HermesSurfacePanel(
                         title: "Examples",
-                        subtitle: "A few common patterns that work well with Hermes Desktop."
+                        subtitle: "Common setups."
                     ) {
                         VStack(alignment: .leading, spacing: 12) {
                             ExampleValueRow(label: "Raspberry Pi", value: "Alias `hermes-home` or host `raspberrypi.local`")

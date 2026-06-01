@@ -322,11 +322,17 @@ final class AppState: ObservableObject {
     }
 
     func isSectionAvailable(_ section: AppSection) -> Bool {
-        section == .connections || activeConnection != nil
+        if section == .connections { return true }
+        guard activeConnection != nil else { return false }
+        return connectionStore.visibleSidebarSections.contains(section)
     }
 
     func requestSectionSelection(_ section: AppSection) {
         guard selectedSection != section else { return }
+        guard isSectionAvailable(section) else {
+            selectedSection = .connections
+            return
+        }
         guard section != .files || activeConnection != nil else {
             selectedSection = .connections
             return

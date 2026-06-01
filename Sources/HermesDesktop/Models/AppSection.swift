@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-enum AppSection: String, CaseIterable, Identifiable {
+enum AppSection: String, CaseIterable, Codable, Identifiable {
     case connections
     case overview
     case files
@@ -17,6 +17,10 @@ enum AppSection: String, CaseIterable, Identifiable {
 
     static var navigationCases: [AppSection] {
         [.connections, .sessions, .workflows, .cronjobs, .kanban, .files, .usage, .skills, .terminal]
+    }
+
+    static var customizableSidebarSections: [AppSection] {
+        [.sessions, .workflows, .cronjobs, .kanban, .files, .usage, .skills, .terminal]
     }
 
     var title: String {

@@ -964,6 +964,9 @@
 "Check documentation" = "Check documentation";
 "Checking host discovery…" = "Checking host discovery…";
 "Colors" = "Colors";
+"Choose which sections appear in the sidebar." = "Choose which sections appear in the sidebar.";
+"Common setups." = "Common setups.";
+"Connection Tips" = "Connection Tips";
 "Control which Hermes profiles Desktop tracks locally, or delete a non-default profile from the host." = "Control which Hermes profiles Desktop tracks locally, or delete a non-default profile from the host.";
 "Customize terminal appearance" = "Customize terminal appearance";
 "Default profile cannot be deleted" = "Default profile cannot be deleted";
@@ -980,8 +983,11 @@
 "Host Connection" = "Host Connection";
 "Host Actions" = "Host Actions";
 "Last Checked" = "Last Checked";
+"Leave empty for the default profile." = "Leave empty for the default profile.";
 "Manage Profiles" = "Manage Profiles";
 "Manage which Hermes profiles this Mac tracks on the active host." = "Manage which Hermes profiles this Mac tracks on the active host.";
+"Move Down" = "Move Down";
+"Move Up" = "Move Up";
 "Need help? Check documentation" = "Need help? Check documentation";
 "Next steps" = "Next steps";
 "Port" = "Port";
@@ -990,6 +996,10 @@
 "Refresh Profiles" = "Refresh Profiles";
 "Run Diagnostics" = "Run Diagnostics";
 "Settings" = "Settings";
+"Show in Sidebar" = "Show in Sidebar";
+"Sidebar" = "Sidebar";
+"SSH alias is used before Host." = "SSH alias is used before Host.";
+"SSH should connect without prompts." = "SSH should connect without prompts.";
 "Stop Tracing" = "Stop Tracing";
 "Stop tracing this profile?" = "Stop tracing this profile?";
 "Stopped tracking %@" = "Stopped tracking %@";
@@ -1004,4 +1014,7 @@
 "Tracking %@ again" = "Tracking %@ again";
 "Tune terminal colors and font size. Changes apply to Terminal and live Chat sessions." = "Tune terminal colors and font size. Changes apply to Terminal and live Chat sessions.";
 "Unable to delete profile" = "Unable to delete profile";
+"Use an alias when you have one." = "Use an alias when you have one.";
+"Use localhost or a local SSH alias." = "Use localhost or a local SSH alias.";
+"Use the same SSH setup that works in Terminal." = "Use the same SSH setup that works in Terminal.";
 "User" = "User";
