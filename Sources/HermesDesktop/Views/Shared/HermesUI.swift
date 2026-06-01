@@ -859,6 +859,7 @@ struct HermesCollapsibleHSplitView<Primary: View, Detail: View>: View {
     @Binding var layout: HermesSplitLayout
     let detailMinWidth: CGFloat
     let usesTransition: Bool
+    let keepsSplitViewWhenCollapsed: Bool
     let primary: Primary
     let detail: Detail
     private let collapseAnimation = Animation.snappy(duration: 0.16, extraBounce: 0)
@@ -867,19 +868,21 @@ struct HermesCollapsibleHSplitView<Primary: View, Detail: View>: View {
         layout: Binding<HermesSplitLayout>,
         detailMinWidth: CGFloat,
         usesTransition: Bool = true,
+        keepsSplitViewWhenCollapsed: Bool = false,
         @ViewBuilder primary: () -> Primary,
         @ViewBuilder detail: () -> Detail
     ) {
         self._layout = layout
         self.detailMinWidth = detailMinWidth
         self.usesTransition = usesTransition
+        self.keepsSplitViewWhenCollapsed = keepsSplitViewWhenCollapsed
         self.primary = primary()
         self.detail = detail()
     }
 
     var body: some View {
         ZStack {
-            if layout.isPrimaryCollapsed {
+            if layout.isPrimaryCollapsed && !keepsSplitViewWhenCollapsed {
                 detail
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     .transition(usesTransition ? .opacity : .identity)
@@ -1053,6 +1056,9 @@ struct HermesPersistentHSplitView<Primary: View, Detail: View>: NSViewRepresenta
             constrainMinCoordinate proposedMinimumPosition: CGFloat,
             ofSubviewAt dividerIndex: Int
         ) -> CGFloat {
+            if layout?.wrappedValue.isPrimaryCollapsed == true {
+                return 0
+            }
             return effectivePrimaryMinimum(in: splitView) ?? proposedMinimumPosition
         }
 
@@ -1064,7 +1070,9 @@ struct HermesPersistentHSplitView<Primary: View, Detail: View>: NSViewRepresenta
             guard let upperBound = primaryUpperBound(in: splitView) else {
                 return proposedMaximumPosition
             }
-            let lowerBound = effectivePrimaryMinimum(in: splitView) ?? 0
+            let lowerBound = layout?.wrappedValue.isPrimaryCollapsed == true
+                ? 0
+                : effectivePrimaryMinimum(in: splitView) ?? 0
             return max(lowerBound, upperBound)
         }
 

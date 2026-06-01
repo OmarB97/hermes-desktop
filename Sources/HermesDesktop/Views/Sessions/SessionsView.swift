@@ -12,7 +12,8 @@ struct SessionsView: View {
         HermesCollapsibleHSplitView(
             layout: $splitLayout,
             detailMinWidth: 420,
-            usesTransition: !isSessionChatTerminalVisible
+            usesTransition: !isSessionChatTerminalVisible,
+            keepsSplitViewWhenCollapsed: isSessionChatTerminalVisible
         ) {
             VStack(alignment: .leading, spacing: 18) {
                 HermesPageHeader(
