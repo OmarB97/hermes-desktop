@@ -372,11 +372,11 @@ private struct CronJobCardRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isSelected ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.08))
+                    .fill(isSelected ? HermesTheme.selectedFill : HermesTheme.rowFill)
             )
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(isSelected ? 0.12 : 0.06), lineWidth: 1)
+                    .strokeBorder(isSelected ? HermesTheme.selectedStroke : HermesTheme.subtleStroke, lineWidth: 1)
             }
         }
         .buttonStyle(.plain)
@@ -788,7 +788,7 @@ private struct CronJobEditorView: View {
                             )
                             .overlay {
                                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                                    .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
                             }
                     }
                 }

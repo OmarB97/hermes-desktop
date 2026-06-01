@@ -381,11 +381,11 @@ private struct SessionCardRow: View {
         Button(action: onTogglePin) {
             Image(systemName: isPinned ? "pin.fill" : "pin")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(isPinned ? Color.orange : Color.secondary)
+                .foregroundStyle(isPinned ? HermesTheme.warningForeground : Color.secondary)
                 .frame(width: 24, height: 24)
                 .background(
                     Circle()
-                        .fill(isPinned ? Color.orange.opacity(0.18) : Color.secondary.opacity(0.08))
+                        .fill(isPinned ? HermesTheme.warningFill : HermesTheme.rowFill)
                 )
                 .contentShape(Circle())
         }

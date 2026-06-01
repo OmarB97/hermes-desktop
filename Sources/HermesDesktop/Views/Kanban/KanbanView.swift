@@ -863,7 +863,7 @@ private struct KanbanColumnView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(Color.secondary.opacity(0.026), in: RoundedRectangle(cornerRadius: HermesTheme.panelCornerRadius, style: .continuous))
+        .background(HermesTheme.panelFill, in: RoundedRectangle(cornerRadius: HermesTheme.panelCornerRadius, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: HermesTheme.panelCornerRadius, style: .continuous)
                 .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
@@ -899,7 +899,7 @@ private struct KanbanColumnView: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.secondary.opacity(0.035), in: RoundedRectangle(cornerRadius: HermesTheme.rowCornerRadius, style: .continuous))
+            .background(HermesTheme.rowFill, in: RoundedRectangle(cornerRadius: HermesTheme.rowCornerRadius, style: .continuous))
     }
 }
 
@@ -940,7 +940,7 @@ private struct KanbanTaskCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: HermesTheme.rowCornerRadius, style: .continuous)
-                    .fill(isSelected ? HermesTheme.selectedFill : isHovering ? Color.secondary.opacity(0.07) : HermesTheme.rowFill)
+                    .fill(isSelected ? HermesTheme.selectedFill : isHovering ? HermesTheme.hoverFill : HermesTheme.rowFill)
             )
             .overlay {
                 RoundedRectangle(cornerRadius: HermesTheme.rowCornerRadius, style: .continuous)
@@ -1108,7 +1108,7 @@ private struct KanbanBoardEditorView: View {
                                 )
                                 .overlay {
                                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                                        .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
                                 }
                         }
 
@@ -1194,7 +1194,7 @@ private struct KanbanTaskEditorView: View {
                                 )
                                 .overlay {
                                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                                        .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
                                 }
                         }
 
@@ -2436,10 +2436,10 @@ private struct KanbanTextEditor: View {
                     .allowsHitTesting(false)
             }
         }
-        .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(HermesTheme.insetFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
         }
     }
 }

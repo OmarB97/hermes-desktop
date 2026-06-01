@@ -257,7 +257,11 @@ private struct WorkflowCardRow: View {
     let onSelect: () -> Void
 
     private var cardFillColor: Color {
-        isSelected ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.08)
+        isSelected ? HermesTheme.selectedFill : HermesTheme.rowFill
+    }
+
+    private var cardStrokeColor: Color {
+        isSelected ? HermesTheme.selectedStroke : HermesTheme.subtleStroke
     }
 
     private var previewSkills: [WorkflowSkillReference] {
@@ -318,7 +322,7 @@ private struct WorkflowCardRow: View {
             .background(cardFillColor, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(isSelected ? Color.accentColor.opacity(0.26) : Color.primary.opacity(0.05), lineWidth: 1)
+                    .stroke(cardStrokeColor, lineWidth: 1)
             }
         }
         .buttonStyle(.plain)
@@ -365,8 +369,7 @@ private struct WorkflowDetailView: View {
                                missingSkills.count == workflow.assignedSkills.count {
                                 WorkflowInlineNotice(
                                     title: "Unable to refresh the skill catalog",
-                                    message: catalogErrorMessage,
-                                    tint: .orange
+                                    message: catalogErrorMessage
                                 )
                             } else if !missingSkills.isEmpty {
                                 WorkflowInlineNotice(
@@ -374,8 +377,7 @@ private struct WorkflowDetailView: View {
                                     message: L10n.string(
                                         "This workflow references skills that are not available on the active host/profile: %@",
                                         missingSkills.map(\.relativePath).joined(separator: ", ")
-                                    ),
-                                    tint: .orange
+                                    )
                                 )
                             }
 
@@ -420,7 +422,11 @@ private struct WorkflowDetailView: View {
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(14)
-                            .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+                            .background(HermesTheme.insetFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
+                            }
                     }
 
                     HermesSurfacePanel(
@@ -482,15 +488,13 @@ private struct WorkflowEditorView: View {
                         if let validationError = draft.validationError {
                             WorkflowInlineNotice(
                                 title: "Finish the required fields",
-                                message: L10n.string(validationError),
-                                tint: .orange
+                                message: L10n.string(validationError)
                             )
                         } else if let catalogErrorMessage,
                                   availableSkills.isEmpty {
                             WorkflowInlineNotice(
                                 title: "Unable to load the skill catalog",
-                                message: catalogErrorMessage,
-                                tint: .orange
+                                message: catalogErrorMessage
                             )
                         }
 
@@ -523,10 +527,10 @@ private struct WorkflowEditorView: View {
                                 .font(.body.monospaced())
                                 .frame(minHeight: 180)
                                 .padding(10)
-                                .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+                                .background(HermesTheme.insetFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                                 .overlay {
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
                                 }
                         }
                     }
@@ -540,8 +544,7 @@ private struct WorkflowEditorView: View {
                         if !selectedMissingSkills.isEmpty {
                             WorkflowInlineNotice(
                                 title: "Unavailable saved skills",
-                                message: L10n.string("These saved skills are not available on the active host/profile anymore. Remove them or keep editing while they stay unavailable."),
-                                tint: .orange
+                                message: L10n.string("These saved skills are not available on the active host/profile anymore. Remove them or keep editing while they stay unavailable.")
                             )
 
                             WorkflowMissingSkillEditorList(
@@ -608,10 +611,10 @@ private struct WorkflowSkillToggleRow: View {
         .toggleStyle(.checkbox)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(Color.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+        .background(HermesTheme.rowFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
         }
     }
 }
@@ -673,7 +676,11 @@ private struct WorkflowMissingSkillEditorList: View {
                     .controlSize(.small)
                 }
                 .padding(12)
-                .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+                .background(HermesTheme.warningFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(HermesTheme.warningStroke, lineWidth: 1)
+                }
             }
         }
     }
@@ -682,12 +689,12 @@ private struct WorkflowMissingSkillEditorList: View {
 private struct WorkflowInlineNotice: View {
     let title: String
     let message: String
-    let tint: Color
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(L10n.string(title))
                 .font(.subheadline.weight(.semibold))
+                .foregroundStyle(HermesTheme.warningForeground)
 
             Text(message)
                 .font(.subheadline)
@@ -695,7 +702,11 @@ private struct WorkflowInlineNotice: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(tint.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+        .background(HermesTheme.warningFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(HermesTheme.warningStroke, lineWidth: 1)
+        }
     }
 }
 
@@ -726,10 +737,10 @@ private struct WorkflowMetricBadge: View {
             .font(.caption2.weight(.semibold))
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(Color.secondary.opacity(0.08), in: Capsule())
+            .background(HermesTheme.rowFill, in: Capsule())
             .overlay {
                 Capsule()
-                    .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+                    .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
             }
     }
 }

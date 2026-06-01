@@ -202,7 +202,7 @@ struct FilesView: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
-                    .background(Color.secondary.opacity(0.10), in: Capsule())
+                    .background(HermesTheme.rowFill, in: Capsule())
             }
             .contentShape(Rectangle())
         }
@@ -212,11 +212,11 @@ struct FilesView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.secondary.opacity(0.06))
+                .fill(HermesTheme.rowFill)
         )
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+                .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
         }
     }
 
@@ -397,11 +397,11 @@ private struct WorkspaceFileCardRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isSelected ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.08))
+                    .fill(isSelected ? HermesTheme.selectedFill : HermesTheme.rowFill)
             )
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(isSelected ? 0.12 : 0.06), lineWidth: 1)
+                    .strokeBorder(isSelected ? HermesTheme.selectedStroke : HermesTheme.subtleStroke, lineWidth: 1)
             }
         }
         .buttonStyle(.plain)
@@ -537,7 +537,7 @@ private struct WorkspaceFileEditorPane: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                            .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -687,7 +687,7 @@ private struct WorkspaceFileBrowserSheet: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                        .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
                 }
             } else {
                 ContentUnavailableView(

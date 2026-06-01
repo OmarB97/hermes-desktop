@@ -358,7 +358,7 @@ struct SessionDetailView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .background(Color.secondary.opacity(0.06))
+                .background(HermesTheme.rowFill)
 
                 SwiftTermTerminalView(
                     session: terminal.terminalSession,
@@ -1973,7 +1973,7 @@ private struct ToolMessageCard: View {
         }
         .overlay {
             RoundedRectangle(cornerRadius: HermesTheme.rowCornerRadius, style: .continuous)
-                .strokeBorder(Color.secondary.opacity(0.13), lineWidth: 1)
+                .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
         }
     }
 

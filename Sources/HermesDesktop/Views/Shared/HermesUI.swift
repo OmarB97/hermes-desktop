@@ -7,28 +7,74 @@ enum HermesTheme {
     static let insetCornerRadius: CGFloat = 10
     static let rowCornerRadius: CGFloat = 12
 
+    /// Window-level background. The sidebar List with `.sidebar` style also
+    /// uses this token so the surface under the native chrome matches the app.
+    static var appBackground: Color {
+        Color(nsColor: .windowBackgroundColor)
+    }
+
+    /// Same as `appBackground` on macOS — kept as a dedicated token so views
+    /// can opt into the sidebar surface without reading `windowBackgroundColor`
+    /// directly.
+    static var sidebarBackground: Color {
+        Color(nsColor: .windowBackgroundColor)
+    }
+
+    /// Card / panel surface. Tied directly to `controlBackgroundColor` so the
+    /// panel feels like a native macOS control, not a translucent overlay.
     static var panelFill: Color {
-        Color(NSColor.controlBackgroundColor).opacity(0.72)
+        Color(nsColor: .controlBackgroundColor)
     }
 
+    /// Inset / prompt / editor surface. Slightly lighter than the panel using
+    /// `textBackgroundColor`, which reads as a macOS text field on both
+    /// Light and Dark.
     static var insetFill: Color {
-        Color.secondary.opacity(0.055)
+        Color(nsColor: .textBackgroundColor).opacity(0.55)
     }
 
+    /// Row inside a panel. Same family as `panelFill` but a touch lighter so
+    /// rows separate from the panel background without needing heavy borders.
     static var rowFill: Color {
-        Color.secondary.opacity(0.045)
+        Color(nsColor: .controlBackgroundColor).opacity(0.72)
     }
 
+    /// Row hover highlight. Slightly more opaque than `rowFill` so a hovered
+    /// row reads as "lifted" without a separate accent.
+    static var hoverFill: Color {
+        Color(nsColor: .controlBackgroundColor).opacity(0.88)
+    }
+
+    /// Subtle hairline used by every neutral card/row border. Anchored to
+    /// `separatorColor` so it adapts to Light/Dark without hand-tuned opacities.
     static var subtleStroke: Color {
-        Color.primary.opacity(0.055)
+        Color(nsColor: .separatorColor).opacity(0.55)
     }
 
+    /// Selection fill, mid of the recommended 0.12–0.14 range.
     static var selectedFill: Color {
-        Color.accentColor.opacity(0.12)
+        Color.accentColor.opacity(0.14)
     }
 
+    /// Selection border, mid of the recommended 0.25–0.28 range.
     static var selectedStroke: Color {
-        Color.accentColor.opacity(0.22)
+        Color.accentColor.opacity(0.28)
+    }
+
+    /// Warning surface fill (missing skills, validation errors, etc).
+    static var warningFill: Color {
+        Color.orange.opacity(0.11)
+    }
+
+    /// Warning surface border. Pair with `warningFill` to keep dark mode from
+    /// collapsing into a muddy brown.
+    static var warningStroke: Color {
+        Color.orange.opacity(0.28)
+    }
+
+    /// Warning foreground (titles, icons inside a warning surface).
+    static var warningForeground: Color {
+        Color.orange
     }
 }
 
@@ -655,7 +701,7 @@ struct HermesExpandableSearchField: View {
         )
         .overlay {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(Color.primary.opacity(shouldShowExpandedField ? 0.10 : 0.06), lineWidth: 1)
+                .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
         }
         .animation(.spring(response: 0.24, dampingFraction: 0.88), value: shouldShowExpandedField)
         .onAppear {

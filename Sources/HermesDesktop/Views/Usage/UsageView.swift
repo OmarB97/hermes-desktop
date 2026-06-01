@@ -865,7 +865,7 @@ private struct UsageStackedComparisonBar: View {
 
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 999, style: .continuous)
-                    .fill(Color.secondary.opacity(0.10))
+                    .fill(HermesTheme.rowFill)
 
                 HStack(spacing: 0) {
                     RoundedRectangle(cornerRadius: 999, style: .continuous)
@@ -927,11 +927,11 @@ private struct UsageTopSessionRow: View {
         .frame(maxWidth: .infinity, minHeight: 70, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.secondary.opacity(0.08))
+                .fill(HermesTheme.rowFill)
         )
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+                .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
         }
     }
 }
@@ -971,11 +971,11 @@ private struct UsageTopSessionPlaceholderRow: View {
         .frame(maxWidth: .infinity, minHeight: 70, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.secondary.opacity(0.05))
+                .fill(HermesTheme.rowFill)
         )
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.04), lineWidth: 1)
+                .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
         }
     }
 }
@@ -1050,11 +1050,11 @@ private struct UsageTopModelRow: View {
         .frame(maxWidth: .infinity, minHeight: 70, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.secondary.opacity(0.08))
+                .fill(HermesTheme.rowFill)
         )
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+                .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
         }
     }
 }
@@ -1100,11 +1100,11 @@ private struct UsageTopModelPlaceholderRow: View {
         .frame(maxWidth: .infinity, minHeight: 70, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.secondary.opacity(0.05))
+                .fill(HermesTheme.rowFill)
         )
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.04), lineWidth: 1)
+                .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
         }
     }
 }

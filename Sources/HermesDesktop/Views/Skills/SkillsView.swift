@@ -222,7 +222,11 @@ private struct SkillCardRow: View {
     let onSelect: () -> Void
 
     private var cardFillColor: Color {
-        isSelected ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.08)
+        isSelected ? HermesTheme.selectedFill : HermesTheme.rowFill
+    }
+
+    private var cardStrokeColor: Color {
+        isSelected ? HermesTheme.selectedStroke : HermesTheme.subtleStroke
     }
 
     var body: some View {
@@ -283,7 +287,7 @@ private struct SkillCardRow: View {
             )
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(isSelected ? 0.12 : 0.06), lineWidth: 1)
+                    .strokeBorder(cardStrokeColor, lineWidth: 1)
             }
         }
         .buttonStyle(.plain)
