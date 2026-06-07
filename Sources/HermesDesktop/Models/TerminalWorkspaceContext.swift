@@ -6,4 +6,5 @@ struct TerminalWorkspaceContext {
     let isTerminalSectionActive: Bool
     let terminalTheme: TerminalThemePreference
     let terminalFontSize: Double
+    let backgroundImageActive: Bool
 }

@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 private let workbenchPrimaryColumnWidth: CGFloat = 460
@@ -143,13 +144,37 @@ struct RootView: View {
 
     @ViewBuilder
     private var rootContent: some View {
-        HermesCollapsibleHSplitView(layout: workspaceSidebarSplitLayout, detailMinWidth: 0) {
-            workspaceSidebar
-        } detail: {
-            detailView
-                .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
-                .layoutPriority(1)
-                .clipped()
+        ZStack {
+            backgroundImageView
+
+            HermesCollapsibleHSplitView(layout: workspaceSidebarSplitLayout, detailMinWidth: 0) {
+                workspaceSidebar
+            } detail: {
+                detailView
+                    .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
+                    .layoutPriority(1)
+                    .clipped()
+            }
+            .environment(\.backgroundImageActive, appState.connectionStore.isBackgroundImageActive)
+        }
+    }
+
+    @ViewBuilder
+    private var backgroundImageView: some View {
+        if let backgroundImageURL = appState.connectionStore.backgroundImageURL,
+           let nsImage = NSImage(contentsOf: backgroundImageURL) {
+            GeometryReader { geometry in
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .clipped()
+            }
+            .ignoresSafeArea()
+            .overlay(Color.black.opacity(0.28))
+        } else {
+            HermesTheme.appBackground
+                .ignoresSafeArea()
         }
     }
 
@@ -169,6 +194,12 @@ struct RootView: View {
             }
         }
         .listStyle(.sidebar)
+        .scrollContentBackground(appState.connectionStore.isBackgroundImageActive ? .hidden : .automatic)
+        .background(alignment: .leading) {
+            if appState.connectionStore.isBackgroundImageActive {
+                Rectangle().fill(.regularMaterial)
+            }
+        }
         .frame(minWidth: 160, idealWidth: 188, maxWidth: 220)
     }
 
@@ -319,7 +350,8 @@ struct RootView: View {
                     activeWorkspaceScopeFingerprint: appState.activeConnection?.workspaceScopeFingerprint,
                     isTerminalSectionActive: appState.selectedSection == .terminal,
                     terminalTheme: appState.connectionStore.terminalTheme,
-                    terminalFontSize: appState.connectionStore.terminalFontSize
+                    terminalFontSize: appState.connectionStore.terminalFontSize,
+                    backgroundImageActive: appState.connectionStore.isBackgroundImageActive
                 ),
                 ensureTerminalSession: {
                     appState.ensureTerminalSession()

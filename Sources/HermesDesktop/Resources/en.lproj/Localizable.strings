@@ -1032,3 +1032,13 @@
 "Add or select a host, then run diagnostics." = "Add or select a host, then run diagnostics.";
 "Browse Files" = "Browse Files";
 "User" = "User";
+"Background Image" = "Background Image";
+"Use an image behind workspace panels and terminal sessions." = "Use an image behind workspace panels and terminal sessions.";
+"Choose Image…" = "Choose Image…";
+"Change Image…" = "Change Image…";
+"Clear Image" = "Clear Image";
+"Selected image" = "Selected image";
+"Saved image not found" = "Saved image not found";
+"No background image selected." = "No background image selected.";
+"Choose another image or clear the setting." = "Choose another image or clear the setting.";
+"Choose a local image to customize the app background." = "Choose a local image to customize the app background.";

@@ -6,6 +6,7 @@ struct TerminalTabContainer: View {
     let fontSize: Double
     let isActive: Bool
     let activeWorkspaceScopeFingerprint: String?
+    let backgroundImageActive: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -47,11 +48,17 @@ struct TerminalTabContainer: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(Color.secondary.opacity(0.08))
+            .background(backgroundImageActive ? AnyShapeStyle(.thinMaterial) : AnyShapeStyle(Color.secondary.opacity(0.08)))
 
-            SwiftTermTerminalView(session: session, appearance: appearance, fontSize: fontSize, isActive: isActive)
+            SwiftTermTerminalView(
+                session: session,
+                appearance: appearance,
+                fontSize: fontSize,
+                isActive: isActive,
+                backgroundImageActive: backgroundImageActive
+            )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(appearance.backgroundColor.swiftUIColor)
+                .background(backgroundImageActive ? Color.clear : appearance.backgroundColor.swiftUIColor)
                 .clipped()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

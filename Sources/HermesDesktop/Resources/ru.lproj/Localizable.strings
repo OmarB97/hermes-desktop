@@ -1032,3 +1032,13 @@
 "Add or select a host, then run diagnostics." = "Добавьте или выберите хост, затем запустите диагностику.";
 "Browse Files" = "Просмотреть файлы";
 "User" = "Пользователь";
+"Background Image" = "Фоновое изображение";
+"Use an image behind workspace panels and terminal sessions." = "Используйте изображение за панелями рабочего пространства и сессиями терминала.";
+"Choose Image…" = "Выбрать изображение…";
+"Change Image…" = "Изменить изображение…";
+"Clear Image" = "Удалить изображение";
+"Selected image" = "Выбранное изображение";
+"Saved image not found" = "Сохранённое изображение не найдено";
+"No background image selected." = "Фоновое изображение не выбрано.";
+"Choose another image or clear the setting." = "Выберите другое изображение или очистите настройку.";
+"Choose a local image to customize the app background." = "Выберите локальное изображение для фона приложения.";

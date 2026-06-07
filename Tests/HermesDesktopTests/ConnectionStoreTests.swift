@@ -76,6 +76,40 @@ struct ConnectionStoreTests {
         #expect(try posixPermissions(at: paths.preferencesURL) == 0o600)
         #expect(try posixPermissions(at: paths.connectionsURL) == 0o600)
     }
+
+    @Test
+    func backgroundImageIsCopiedPersistedAndCleared() throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let paths = makeTestAppPaths(root: root)
+        let sourceURL = root.appendingPathComponent("source-background.png")
+        try samplePNGData.write(to: sourceURL)
+
+        let store = ConnectionStore(paths: paths)
+        store.setBackgroundImage(from: sourceURL)
+
+        let savedURL = try #require(store.backgroundImageURL)
+        #expect(savedURL != sourceURL)
+        #expect(savedURL.deletingLastPathComponent() == paths.appearanceAssetsURL)
+        #expect(store.backgroundImageOriginalFileName == "source-background.png")
+        #expect(store.isBackgroundImageActive)
+        #expect(try posixPermissions(at: savedURL) == 0o600)
+
+        let reloadedStore = ConnectionStore(paths: paths)
+        let reloadedURL = try #require(reloadedStore.backgroundImageURL)
+        #expect(reloadedURL == savedURL)
+        #expect(reloadedStore.isBackgroundImageActive)
+
+        try FileManager.default.removeItem(at: reloadedURL)
+        #expect(reloadedStore.backgroundImageURL == nil)
+        #expect(reloadedStore.isBackgroundImageMissing)
+        #expect(!reloadedStore.isBackgroundImageActive)
+
+        reloadedStore.clearBackgroundImage()
+        #expect(reloadedStore.backgroundImageOriginalFileName == nil)
+        #expect(!reloadedStore.isBackgroundImageMissing)
+    }
 }
 
 private func posixPermissions(at url: URL) throws -> Int {
@@ -83,3 +117,5 @@ private func posixPermissions(at url: URL) throws -> Int {
     let number = try #require(attributes[.posixPermissions] as? NSNumber)
     return number.intValue
 }
+
+private let samplePNGData = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=")!

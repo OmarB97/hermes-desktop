@@ -11,6 +11,7 @@ final class TerminalViewHost: NSObject, LocalProcessTerminalViewDelegate {
     private var initialInputTask: Task<Void, Never>?
     private var appliedAppearance: TerminalThemeAppearance?
     private var appliedFontSize: Double?
+    private var appliedBackgroundImageActive: Bool?
     private var onProcessStart: (() -> Void)?
     private var onTitleChange: ((String) -> Void)?
     private var onDirectoryChange: ((String?) -> Void)?
@@ -38,10 +39,11 @@ final class TerminalViewHost: NSObject, LocalProcessTerminalViewDelegate {
         request: TerminalLaunchRequest,
         appearance: TerminalThemeAppearance,
         fontSize: Double,
-        isActive: Bool
+        isActive: Bool,
+        backgroundImageActive: Bool
     ) {
         container.mount(hostView)
-        applyAppearance(appearance)
+        applyAppearance(appearance, backgroundImageActive: backgroundImageActive)
         applyFontSize(fontSize)
         setActive(isActive)
         scheduleStartIfNeeded(for: request)
@@ -113,10 +115,11 @@ final class TerminalViewHost: NSObject, LocalProcessTerminalViewDelegate {
         deliverInitialInputIfNeeded(for: request)
     }
 
-    private func applyAppearance(_ appearance: TerminalThemeAppearance) {
-        guard appliedAppearance != appearance else { return }
+    private func applyAppearance(_ appearance: TerminalThemeAppearance, backgroundImageActive: Bool) {
+        guard appliedAppearance != appearance || appliedBackgroundImageActive != backgroundImageActive else { return }
         appliedAppearance = appearance
-        hostView.apply(appearance: appearance)
+        appliedBackgroundImageActive = backgroundImageActive
+        hostView.apply(appearance: appearance, backgroundImageActive: backgroundImageActive)
     }
 
     private func applyFontSize(_ fontSize: Double) {
@@ -319,16 +322,17 @@ final class TerminalHostView: NSView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func apply(appearance: TerminalThemeAppearance) {
+    func apply(appearance: TerminalThemeAppearance, backgroundImageActive: Bool) {
         let backgroundColor = appearance.backgroundColor.nsColor
         let foregroundColor = appearance.foregroundColor.nsColor
+        let terminalBackgroundColor = backgroundImageActive ? NSColor.clear : backgroundColor
 
-        layer?.backgroundColor = backgroundColor.cgColor
-        terminalView.nativeBackgroundColor = backgroundColor
+        layer?.backgroundColor = terminalBackgroundColor.cgColor
+        terminalView.nativeBackgroundColor = terminalBackgroundColor
         terminalView.nativeForegroundColor = foregroundColor
         terminalView.selectedTextBackgroundColor = foregroundColor.withAlphaComponent(0.28)
         terminalView.caretColor = foregroundColor
-        terminalView.caretTextColor = backgroundColor
+        terminalView.caretTextColor = backgroundImageActive ? NSColor.black.withAlphaComponent(0.72) : backgroundColor
         terminalView.installColors(appearance.ansiPalette.map(Self.makeTerminalColor(from:)))
     }
 

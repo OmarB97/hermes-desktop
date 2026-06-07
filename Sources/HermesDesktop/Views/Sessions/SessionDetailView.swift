@@ -89,6 +89,8 @@ struct SessionDetailView: View {
     let onUpdateTerminalFontSize: (Double) -> Void
     let onTerminalExitRefresh: () async -> Void
 
+    @Environment(\.backgroundImageActive) private var backgroundImageActive
+
     @State private var showDeleteConfirmation = false
     @State private var isShowingChatAppearanceEditor = false
     @State private var scrollRequest = SessionScrollRequest()
@@ -352,13 +354,14 @@ struct SessionDetailView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .background(HermesTheme.rowFill)
+                .background(backgroundImageActive ? AnyShapeStyle(.thinMaterial) : AnyShapeStyle(HermesTheme.rowFill))
 
                 SwiftTermTerminalView(
                     session: terminal.terminalSession,
                     appearance: terminalAppearance,
                     fontSize: terminalFontSize,
-                    isActive: isActive && mode == .chat
+                    isActive: isActive && mode == .chat,
+                    backgroundImageActive: backgroundImageActive
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -943,6 +946,7 @@ private struct SessionCompactionNoticeView: View {
 private struct TranscriptMessageSurface<Content: View>: View {
     let tint: Color
     let content: Content
+    @Environment(\.backgroundImageActive) private var backgroundImageActive
 
     init(tint: Color, @ViewBuilder content: () -> Content) {
         self.tint = tint
@@ -956,7 +960,7 @@ private struct TranscriptMessageSurface<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: HermesTheme.rowCornerRadius, style: .continuous)
-                    .fill(HermesTheme.rowFill)
+                    .fill(backgroundImageActive ? AnyShapeStyle(.thinMaterial) : AnyShapeStyle(HermesTheme.rowFill))
             )
             .overlay(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 999, style: .continuous)
@@ -1078,6 +1082,7 @@ private struct ToolMessageCard: View {
     let message: SessionMessageDisplay
     @Binding var isShowingMetadata: Bool
     @State private var isExpanded = false
+    @Environment(\.backgroundImageActive) private var backgroundImageActive
 
     private var summary: SessionToolMessageSummary? {
         message.toolSummary
@@ -1103,7 +1108,7 @@ private struct ToolMessageCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: HermesTheme.rowCornerRadius, style: .continuous)
-                .fill(HermesTheme.rowFill)
+                .fill(backgroundImageActive ? AnyShapeStyle(.thinMaterial) : AnyShapeStyle(HermesTheme.rowFill))
         )
         .overlay(alignment: .leading) {
             RoundedRectangle(cornerRadius: 999, style: .continuous)
@@ -1219,6 +1224,7 @@ private struct ToolOutputView: View {
     let content: String?
     let summary: SessionToolMessageSummary?
     @State private var isShowingFullOutput = false
+    @Environment(\.backgroundImageActive) private var backgroundImageActive
 
     private var visibleContent: String? {
         guard isShowingFullOutput else {
@@ -1243,7 +1249,10 @@ private struct ToolOutputView: View {
                         .padding(10)
                 }
                 .frame(maxHeight: isShowingFullOutput ? 280 : 180)
-                .background(HermesTheme.insetFill, in: RoundedRectangle(cornerRadius: HermesTheme.insetCornerRadius, style: .continuous))
+                .background(
+                    backgroundImageActive ? AnyShapeStyle(.thinMaterial) : AnyShapeStyle(HermesTheme.insetFill),
+                    in: RoundedRectangle(cornerRadius: HermesTheme.insetCornerRadius, style: .continuous)
+                )
                 .overlay {
                     RoundedRectangle(cornerRadius: HermesTheme.insetCornerRadius, style: .continuous)
                         .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)

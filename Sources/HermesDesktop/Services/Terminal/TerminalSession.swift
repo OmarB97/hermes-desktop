@@ -83,7 +83,13 @@ final class TerminalSession: ObservableObject, @unchecked Sendable {
         launchToken = UUID()
     }
 
-    func mount(in container: TerminalMountContainerView, appearance: TerminalThemeAppearance, fontSize: Double, isActive: Bool) {
+    func mount(
+        in container: TerminalMountContainerView,
+        appearance: TerminalThemeAppearance,
+        fontSize: Double,
+        isActive: Bool,
+        backgroundImageActive: Bool
+    ) {
         viewHost.mount(
             in: container,
             request: TerminalLaunchRequest(
@@ -95,7 +101,8 @@ final class TerminalSession: ObservableObject, @unchecked Sendable {
             ),
             appearance: appearance,
             fontSize: fontSize,
-            isActive: isActive
+            isActive: isActive,
+            backgroundImageActive: backgroundImageActive
         )
     }
 

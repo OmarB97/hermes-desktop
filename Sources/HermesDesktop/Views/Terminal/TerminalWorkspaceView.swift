@@ -63,7 +63,8 @@ struct TerminalWorkspaceView: View {
                     appearance: terminalAppearance,
                     fontSize: context.terminalFontSize,
                     isActive: context.isTerminalSectionActive,
-                    activeWorkspaceScopeFingerprint: context.activeWorkspaceScopeFingerprint
+                    activeWorkspaceScopeFingerprint: context.activeWorkspaceScopeFingerprint,
+                    backgroundImageActive: context.backgroundImageActive
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             } else {

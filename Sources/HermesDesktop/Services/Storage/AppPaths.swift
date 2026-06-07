@@ -7,6 +7,7 @@ struct AppPaths {
     let applicationSupportURL: URL
     let connectionsURL: URL
     let preferencesURL: URL
+    let appearanceAssetsURL: URL
     let controlSocketDirectoryURL: URL
 
     private static let privateDirectoryPermissions = NSNumber(value: Int16(0o700))
@@ -35,6 +36,7 @@ struct AppPaths {
         self.applicationSupportURL = applicationSupportURL
         self.connectionsURL = applicationSupportURL.appendingPathComponent("connections.json")
         self.preferencesURL = applicationSupportURL.appendingPathComponent("preferences.json")
+        self.appearanceAssetsURL = applicationSupportURL.appendingPathComponent("Appearance", isDirectory: true)
         self.controlSocketDirectoryURL = controlSocketDirectoryURL
 
         ensureApplicationSupportDirectory()
@@ -47,6 +49,14 @@ struct AppPaths {
 
     func ensureControlSocketDirectory() {
         createPrivateDirectoryIfNeeded(at: controlSocketDirectoryURL)
+    }
+
+    func ensureAppearanceAssetsDirectory() {
+        createPrivateDirectoryIfNeeded(at: appearanceAssetsURL)
+    }
+
+    func appearanceBackgroundImageURL(fileName: String) -> URL {
+        appearanceAssetsURL.appendingPathComponent(fileName, isDirectory: false)
     }
 
     func controlPath(for connection: ConnectionProfile) -> String {

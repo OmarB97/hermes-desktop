@@ -1,4 +1,6 @@
+import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ConnectionsView: View {
     @Environment(\.openURL) private var openURL
@@ -214,6 +216,18 @@ struct ConnectionsView: View {
                     showsHeader: false,
                     fixedWidth: nil,
                     contentPadding: 0
+                )
+
+                Divider()
+
+                BackgroundImagePreferencePanel(
+                    imageURL: appState.connectionStore.backgroundImageURL,
+                    originalFileName: appState.connectionStore.backgroundImageOriginalFileName,
+                    isMissing: appState.connectionStore.isBackgroundImageMissing,
+                    chooseImage: chooseBackgroundImage,
+                    clearImage: {
+                        appState.connectionStore.clearBackgroundImage()
+                    }
                 )
 
                 Divider()
@@ -505,6 +519,19 @@ struct ConnectionsView: View {
         }
     }
 
+    private func chooseBackgroundImage() {
+        let panel = NSOpenPanel()
+        panel.title = L10n.string("Choose Image…")
+        panel.allowedContentTypes = [.png, .jpeg, .heic, .tiff, .gif]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            appState.connectionStore.setBackgroundImage(from: url)
+        }
+    }
+
     private func canMoveSidebarSectionUp(_ section: AppSection) -> Bool {
         guard let index = appState.connectionStore.sidebarSectionOrder.firstIndex(of: section) else { return false }
         return index > appState.connectionStore.sidebarSectionOrder.startIndex
@@ -715,6 +742,119 @@ private struct SidebarCustomizationPanel: View {
                 }
             }
         }
+    }
+}
+
+private struct BackgroundImagePreferencePanel: View {
+    let imageURL: URL?
+    let originalFileName: String?
+    let isMissing: Bool
+    let chooseImage: () -> Void
+    let clearImage: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L10n.string("Background Image"))
+                    .font(.headline)
+
+                Text(L10n.string("Use an image behind workspace panels and terminal sessions."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HermesInsetSurface {
+                HStack(spacing: 12) {
+                    preview
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(spacing: 7) {
+                            Text(statusTitle)
+                                .font(.subheadline.weight(.semibold))
+
+                            if imageURL != nil {
+                                HermesBadge(text: "Active", tint: .accentColor)
+                            } else if isMissing {
+                                HermesBadge(text: "Missing", tint: .orange)
+                            }
+                        }
+
+                        Text(statusSubtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+
+                    Spacer(minLength: 12)
+
+                    HStack(spacing: 8) {
+                        Button {
+                            chooseImage()
+                        } label: {
+                            Label(L10n.string(imageURL == nil && !isMissing ? "Choose Image…" : "Change Image…"), systemImage: "photo")
+                        }
+                        .buttonStyle(.bordered)
+
+                        if imageURL != nil || isMissing {
+                            Button(role: .destructive) {
+                                clearImage()
+                            } label: {
+                                Label(L10n.string("Clear Image"), systemImage: "xmark.circle")
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var preview: some View {
+        if let imageURL,
+           let image = NSImage(contentsOf: imageURL) {
+            Image(nsImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 86, height: 54)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
+                }
+        } else {
+            Image(systemName: isMissing ? "photo.badge.exclamationmark" : "photo")
+                .font(.system(size: 22, weight: .medium))
+                .foregroundStyle(isMissing ? Color.orange : Color.secondary)
+                .frame(width: 86, height: 54)
+                .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(HermesTheme.subtleStroke, lineWidth: 1)
+                }
+        }
+    }
+
+    private var statusTitle: String {
+        if imageURL != nil {
+            return originalFileName ?? L10n.string("Selected image")
+        }
+        if isMissing {
+            return L10n.string("Saved image not found")
+        }
+        return L10n.string("No background image selected.")
+    }
+
+    private var statusSubtitle: String {
+        if let imageURL {
+            return imageURL.lastPathComponent
+        }
+        if isMissing {
+            return originalFileName ?? L10n.string("Choose another image or clear the setting.")
+        }
+        return L10n.string("Choose a local image to customize the app background.")
     }
 }
 

@@ -1,4 +1,5 @@
 import Combine
+import AppKit
 import Foundation
 
 @MainActor
@@ -31,6 +32,11 @@ final class ConnectionStore: ObservableObject {
         }
     }
     @Published var automaticallyChecksForUpdates = true {
+        didSet {
+            persistPreferencesIfNeeded()
+        }
+    }
+    @Published private(set) var backgroundImage: AppBackgroundImagePreference? {
         didSet {
             persistPreferencesIfNeeded()
         }
@@ -83,6 +89,62 @@ final class ConnectionStore: ObservableObject {
         self.paths = paths
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         load()
+    }
+
+    var backgroundImageURL: URL? {
+        guard let backgroundImage else { return nil }
+        let url = paths.appearanceBackgroundImageURL(fileName: backgroundImage.fileName)
+        guard paths.fileManager.fileExists(atPath: url.path),
+              NSImage(contentsOf: url) != nil else {
+            return nil
+        }
+        return url
+    }
+
+    var isBackgroundImageActive: Bool {
+        backgroundImageURL != nil
+    }
+
+    var backgroundImageOriginalFileName: String? {
+        backgroundImage?.originalFileName
+    }
+
+    var isBackgroundImageMissing: Bool {
+        backgroundImage != nil && backgroundImageURL == nil
+    }
+
+    func setBackgroundImage(from sourceURL: URL) {
+        guard NSImage(contentsOf: sourceURL) != nil else {
+            reportPersistenceError("Unable to use selected background image: the file is not a supported image.")
+            return
+        }
+
+        let fileExtension = normalizedBackgroundImageExtension(from: sourceURL)
+        let fileName = "background-\(UUID().uuidString).\(fileExtension)"
+        let destinationURL = paths.appearanceBackgroundImageURL(fileName: fileName)
+        let previousImage = backgroundImage
+
+        do {
+            paths.ensureAppearanceAssetsDirectory()
+            if paths.fileManager.fileExists(atPath: destinationURL.path) {
+                try paths.fileManager.removeItem(at: destinationURL)
+            }
+            try paths.fileManager.copyItem(at: sourceURL, to: destinationURL)
+            try fileManagerSetPrivatePermissions(at: destinationURL)
+            backgroundImage = AppBackgroundImagePreference(
+                fileName: fileName,
+                originalFileName: sourceURL.lastPathComponent
+            )
+            removeBackgroundImageFile(previousImage)
+        } catch {
+            reportPersistenceError("Unable to save background image: \(error.localizedDescription)")
+        }
+    }
+
+    func clearBackgroundImage() {
+        let previousImage = backgroundImage
+        backgroundImage = nil
+        removeBackgroundImageFile(previousImage)
     }
 
     func upsert(_ connection: ConnectionProfile) {
@@ -309,6 +371,7 @@ final class ConnectionStore: ObservableObject {
             appAppearance: appAppearance,
             automaticallyChecksForUpdates: automaticallyChecksForUpdates,
             lastAutomaticUpdateCheckAt: lastAutomaticUpdateCheckAt,
+            backgroundImage: backgroundImage,
             workspaceFileBookmarks: workspaceFileBookmarks,
             pinnedSessions: pinnedSessions,
             workflows: workflows,
@@ -374,6 +437,7 @@ final class ConnectionStore: ObservableObject {
                 appAppearance: .system,
                 automaticallyChecksForUpdates: true,
                 lastAutomaticUpdateCheckAt: nil,
+                backgroundImage: nil,
                 workspaceFileBookmarks: [],
                 pinnedSessions: [],
                 workflows: [],
@@ -391,6 +455,7 @@ final class ConnectionStore: ObservableObject {
         appAppearance = preferences.appAppearance ?? .system
         automaticallyChecksForUpdates = preferences.automaticallyChecksForUpdates ?? true
         lastAutomaticUpdateCheckAt = preferences.lastAutomaticUpdateCheckAt
+        backgroundImage = preferences.backgroundImage
         workspaceFileBookmarks = preferences.workspaceFileBookmarks ?? []
         pinnedSessions = preferences.pinnedSessions ?? []
         workflows = preferences.workflows ?? []
@@ -406,6 +471,34 @@ final class ConnectionStore: ObservableObject {
     private func fileManagerSetPrivatePermissions(at url: URL) throws {
         try paths.fileManager.setAttributes(privateFileAttributes, ofItemAtPath: url.path)
     }
+
+    private func removeBackgroundImageFile(_ image: AppBackgroundImagePreference?) {
+        guard let image else { return }
+        let url = paths.appearanceBackgroundImageURL(fileName: image.fileName)
+        guard paths.fileManager.fileExists(atPath: url.path) else { return }
+        do {
+            try paths.fileManager.removeItem(at: url)
+        } catch {
+            reportPersistenceError("Unable to remove saved background image: \(error.localizedDescription)")
+        }
+    }
+
+    private func normalizedBackgroundImageExtension(from url: URL) -> String {
+        let ext = url.pathExtension.lowercased()
+        switch ext {
+        case "jpeg":
+            return "jpg"
+        case "png", "jpg", "heic", "tiff", "gif", "webp":
+            return ext
+        default:
+            return "image"
+        }
+    }
+}
+
+struct AppBackgroundImagePreference: Codable, Equatable {
+    var fileName: String
+    var originalFileName: String
 }
 
 private struct AppPreferences: Codable {
@@ -415,6 +508,7 @@ private struct AppPreferences: Codable {
     var appAppearance: AppAppearancePreference?
     var automaticallyChecksForUpdates: Bool?
     var lastAutomaticUpdateCheckAt: Date?
+    var backgroundImage: AppBackgroundImagePreference?
     var workspaceFileBookmarks: [WorkspaceFileBookmark]?
     var pinnedSessions: [PinnedSession]?
     var workflows: [WorkflowPreset]?

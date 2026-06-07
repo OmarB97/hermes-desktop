@@ -11,7 +11,11 @@ struct HermesDesktopApp: App {
             RootView()
                 .environmentObject(appState)
                 .frame(minWidth: 940, minHeight: 520)
-                .background(HermesWindowTitleBarConfigurator())
+                .background(
+                    HermesWindowTitleBarConfigurator(
+                        backgroundImageActive: appState.connectionStore.isBackgroundImageActive
+                    )
+                )
         }
         .defaultSize(width: 1360, height: 860)
         .commands {
