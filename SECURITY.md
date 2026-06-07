@@ -55,8 +55,14 @@ Current files written there include:
   and selected Hermes profile
 - `preferences.json`
   App preferences and lightweight workspace state such as last-used
-  connection, terminal theme preference, update-check preference, bookmarked
-  remote files, pinned sessions, and workflow presets
+  connection, terminal theme and font preferences, app appearance preference,
+  background image metadata, update-check preference, bookmarked remote files,
+  pinned sessions, sidebar order, and workflow presets
+
+If you choose a custom appearance background image, Hermes Desktop copies that
+image into its app support directory so the preference remains available after
+the original file moves. That image is local to your macOS user account and is
+not uploaded by the app.
 
 These files are written with private file permissions (`0600`) and the app
 support directory is created with private directory permissions (`0700`).

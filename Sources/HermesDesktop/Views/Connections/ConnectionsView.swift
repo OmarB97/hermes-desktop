@@ -249,7 +249,7 @@ struct ConnectionsView: View {
                 Divider()
 
                 BackgroundImagePreferencePanel(
-                    imageURL: appState.connectionStore.backgroundImageURL,
+                    image: appState.connectionStore.backgroundImageDisplay,
                     originalFileName: appState.connectionStore.backgroundImageOriginalFileName,
                     isMissing: appState.connectionStore.isBackgroundImageMissing,
                     imageFit: backgroundImageFitBinding,
@@ -592,7 +592,11 @@ struct ConnectionsView: View {
     private func chooseBackgroundImage() {
         let panel = NSOpenPanel()
         panel.title = L10n.string("Choose Image…")
-        panel.allowedContentTypes = [.png, .jpeg, .heic, .tiff, .gif]
+        var imageTypes: [UTType] = [.png, .jpeg, .heic, .tiff, .gif]
+        if let webP = UTType(filenameExtension: "webp") {
+            imageTypes.append(webP)
+        }
+        panel.allowedContentTypes = imageTypes
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
@@ -816,7 +820,7 @@ private struct SidebarCustomizationPanel: View {
 }
 
 private struct BackgroundImagePreferencePanel: View {
-    let imageURL: URL?
+    let image: AppBackgroundImageDisplay?
     let originalFileName: String?
     let isMissing: Bool
     @Binding var imageFit: AppBackgroundImageFitPreference
@@ -845,7 +849,7 @@ private struct BackgroundImagePreferencePanel: View {
                             Text(statusTitle)
                                 .font(.subheadline.weight(.semibold))
 
-                            if imageURL != nil {
+                            if image != nil {
                                 HermesBadge(text: "Active", tint: .accentColor)
                             } else if isMissing {
                                 HermesBadge(text: "Missing", tint: .orange)
@@ -865,11 +869,11 @@ private struct BackgroundImagePreferencePanel: View {
                         Button {
                             chooseImage()
                         } label: {
-                            Label(L10n.string(imageURL == nil && !isMissing ? "Choose Image…" : "Change Image…"), systemImage: "photo")
+                            Label(L10n.string(image == nil && !isMissing ? "Choose Image…" : "Change Image…"), systemImage: "photo")
                         }
                         .buttonStyle(.bordered)
 
-                        if imageURL != nil || isMissing {
+                        if image != nil || isMissing {
                             Button(role: .destructive) {
                                 clearImage()
                             } label: {
@@ -920,16 +924,15 @@ private struct BackgroundImagePreferencePanel: View {
                     }
                 }
             }
-            .disabled(imageURL == nil)
-            .opacity(imageURL == nil ? 0.58 : 1)
+            .disabled(image == nil)
+            .opacity(image == nil ? 0.58 : 1)
         }
     }
 
     @ViewBuilder
     private var preview: some View {
-        if let imageURL,
-           let image = NSImage(contentsOf: imageURL) {
-            Image(nsImage: image)
+        if let image {
+            Image(nsImage: image.image)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 86, height: 54)
@@ -952,7 +955,7 @@ private struct BackgroundImagePreferencePanel: View {
     }
 
     private var statusTitle: String {
-        if imageURL != nil {
+        if image != nil {
             return originalFileName ?? L10n.string("Selected image")
         }
         if isMissing {
@@ -962,8 +965,8 @@ private struct BackgroundImagePreferencePanel: View {
     }
 
     private var statusSubtitle: String {
-        if let imageURL {
-            return imageURL.lastPathComponent
+        if let image {
+            return image.url.lastPathComponent
         }
         if isMissing {
             return originalFileName ?? L10n.string("Choose another image or clear the setting.")

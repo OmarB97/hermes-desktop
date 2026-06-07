@@ -73,6 +73,7 @@ final class ConnectionStore: ObservableObject {
     }
     @Published private(set) var backgroundImage: AppBackgroundImagePreference? {
         didSet {
+            invalidateBackgroundImageCache()
             persistPreferencesIfNeeded()
         }
     }
@@ -119,6 +120,8 @@ final class ConnectionStore: ObservableObject {
         .posixPermissions: NSNumber(value: Int16(0o600))
     ]
     private var isHydratingFromDisk = false
+    private var cachedBackgroundImagePreference: AppBackgroundImagePreference?
+    private var cachedBackgroundImageDisplay: AppBackgroundImageDisplay?
 
     init(paths: AppPaths) {
         self.paths = paths
@@ -126,14 +129,40 @@ final class ConnectionStore: ObservableObject {
         load()
     }
 
-    var backgroundImageURL: URL? {
-        guard let backgroundImage else { return nil }
-        let url = paths.appearanceBackgroundImageURL(fileName: backgroundImage.fileName)
-        guard paths.fileManager.fileExists(atPath: url.path),
-              NSImage(contentsOf: url) != nil else {
+    var backgroundImageDisplay: AppBackgroundImageDisplay? {
+        guard let backgroundImage else {
+            invalidateBackgroundImageCache()
             return nil
         }
-        return url
+
+        let url = paths.appearanceBackgroundImageURL(fileName: backgroundImage.fileName)
+        guard paths.fileManager.fileExists(atPath: url.path) else {
+            invalidateBackgroundImageCache()
+            return nil
+        }
+
+        if cachedBackgroundImagePreference == backgroundImage,
+           cachedBackgroundImageDisplay?.url == url {
+            return cachedBackgroundImageDisplay
+        }
+
+        guard let image = NSImage(contentsOf: url) else {
+            invalidateBackgroundImageCache()
+            return nil
+        }
+
+        let display = AppBackgroundImageDisplay(
+            url: url,
+            image: image,
+            originalFileName: backgroundImage.originalFileName
+        )
+        cachedBackgroundImagePreference = backgroundImage
+        cachedBackgroundImageDisplay = display
+        return display
+    }
+
+    var backgroundImageURL: URL? {
+        backgroundImageDisplay?.url
     }
 
     var isBackgroundImageActive: Bool {
@@ -141,7 +170,7 @@ final class ConnectionStore: ObservableObject {
     }
 
     var backgroundImageOriginalFileName: String? {
-        backgroundImage?.originalFileName
+        backgroundImageDisplay?.originalFileName ?? backgroundImage?.originalFileName
     }
 
     var isBackgroundImageMissing: Bool {
@@ -500,7 +529,7 @@ final class ConnectionStore: ObservableObject {
         terminalFontFamily = preferences.terminalFontFamily ?? .sfMono
         appAppearance = preferences.appAppearance ?? .system
         windowOpacity = AppWindowOpacityPreference.clamped(preferences.windowOpacity ?? AppWindowOpacityPreference.defaultValue)
-        windowMaterial = preferences.windowMaterial ?? .solid
+        windowMaterial = preferences.windowMaterial?.normalizedForDisplay ?? .solid
         backgroundImageFit = preferences.backgroundImageFit ?? .fill
         backgroundImageBlur = AppBackgroundImageBlurPreference.clamped(preferences.backgroundImageBlur ?? AppBackgroundImageBlurPreference.defaultValue)
         automaticallyChecksForUpdates = preferences.automaticallyChecksForUpdates ?? true
@@ -520,6 +549,11 @@ final class ConnectionStore: ObservableObject {
 
     private func fileManagerSetPrivatePermissions(at url: URL) throws {
         try paths.fileManager.setAttributes(privateFileAttributes, ofItemAtPath: url.path)
+    }
+
+    private func invalidateBackgroundImageCache() {
+        cachedBackgroundImagePreference = nil
+        cachedBackgroundImageDisplay = nil
     }
 
     private func removeBackgroundImageFile(_ image: AppBackgroundImagePreference?) {
@@ -549,6 +583,12 @@ final class ConnectionStore: ObservableObject {
 struct AppBackgroundImagePreference: Codable, Equatable {
     var fileName: String
     var originalFileName: String
+}
+
+struct AppBackgroundImageDisplay {
+    let url: URL
+    let image: NSImage
+    let originalFileName: String
 }
 
 private struct AppPreferences: Codable {
@@ -599,5 +639,16 @@ private func normalizedHiddenSidebarSections(_ sections: [AppSection]) -> [AppSe
 private extension String {
     var nilIfEmpty: String? {
         isEmpty ? nil : self
+    }
+}
+
+private extension AppWindowMaterialPreference {
+    var normalizedForDisplay: AppWindowMaterialPreference {
+        switch self {
+        case .solid, .nativeWindow:
+            return .solid
+        case .translucent:
+            return .translucent
+        }
     }
 }

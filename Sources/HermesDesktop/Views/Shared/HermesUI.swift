@@ -878,12 +878,33 @@ struct HermesSplitLayout: Equatable {
         primaryWidth = clampedWidth
     }
 
+    mutating func rememberPrimaryWidth(_ width: CGFloat, availableWidth: CGFloat, detailMinWidth: CGFloat) {
+        guard width.isFinite, width > 0 else { return }
+
+        let clampedWidth = clampedPrimaryWidth(
+            width,
+            availableWidth: availableWidth,
+            detailMinWidth: detailMinWidth
+        )
+        if let primaryWidth, abs(primaryWidth - clampedWidth) < 1 {
+            return
+        }
+
+        primaryWidth = clampedWidth
+    }
+
     private func clamped(_ width: CGFloat) -> CGFloat {
         min(max(width, minPrimaryWidth), maxPrimaryWidth)
     }
 
-    func clampedLivePrimaryWidth(_ width: CGFloat) -> CGFloat {
-        clamped(width)
+    func clampedPrimaryWidth(_ width: CGFloat, availableWidth: CGFloat, detailMinWidth: CGFloat) -> CGFloat {
+        guard availableWidth.isFinite, detailMinWidth.isFinite else {
+            return clamped(width)
+        }
+
+        let availableBeforeDetail = availableWidth - detailMinWidth - Self.resizeHandleWidth
+        let upperBound = max(minPrimaryWidth, min(maxPrimaryWidth, availableBeforeDetail))
+        return min(max(width, minPrimaryWidth), upperBound)
     }
 }
 
@@ -1058,7 +1079,11 @@ struct HermesCollapsibleHSplitView<Primary: View, Detail: View>: View {
                         },
                         onDrag: { translation in
                             let startWidth = activeResizeStartingWidth ?? layout.preferredPrimaryWidth
-                            let targetWidth = layout.clampedLivePrimaryWidth(startWidth + translation)
+                            let targetWidth = layout.clampedPrimaryWidth(
+                                startWidth + translation,
+                                availableWidth: availableWidth,
+                                detailMinWidth: detailMinWidth
+                            )
                             let nextWidth = roundedResizeWidth(targetWidth)
                             let currentWidth = activeResizeLiveWidth ?? startWidth
                             guard abs(currentWidth - nextWidth) >= resizeUpdateStep else { return }
@@ -1073,7 +1098,11 @@ struct HermesCollapsibleHSplitView<Primary: View, Detail: View>: View {
                             let finalWidth = activeResizeLiveWidth ?? layout.primaryWidth ?? layout.preferredPrimaryWidth
                             activeResizeStartingWidth = nil
                             activeResizeLiveWidth = nil
-                            layout.rememberPrimaryWidth(finalWidth)
+                            layout.rememberPrimaryWidth(
+                                finalWidth,
+                                availableWidth: availableWidth,
+                                detailMinWidth: detailMinWidth
+                            )
                         }
                     )
                     .transition(usesTransition ? .opacity : .identity)
@@ -1091,11 +1120,11 @@ struct HermesCollapsibleHSplitView<Primary: View, Detail: View>: View {
     }
 
     private func resolvedPrimaryWidth(in availableWidth: CGFloat) -> CGFloat {
-        let availableBeforeDetail = max(
-            layout.minPrimaryWidth,
-            availableWidth - detailMinWidth - HermesSplitResizeHandle.width
+        layout.clampedPrimaryWidth(
+            layout.preferredPrimaryWidth,
+            availableWidth: availableWidth,
+            detailMinWidth: detailMinWidth
         )
-        return min(layout.preferredPrimaryWidth, availableBeforeDetail)
     }
 
     private func roundedResizeWidth(_ width: CGFloat) -> CGFloat {

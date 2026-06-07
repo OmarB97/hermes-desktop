@@ -120,7 +120,7 @@ enum TerminalFontFamilyPreference: String, CaseIterable, Codable, Identifiable {
         case .systemMonospaced:
             return NSFont.monospacedSystemFont(ofSize: clampedSize, weight: .regular)
         case .sfMono:
-            return NSFont.monospacedSystemFont(ofSize: clampedSize, weight: .regular)
+            return Self.font(named: ["SFMono-Regular", "SF Mono"], size: clampedSize)
         case .menlo:
             return Self.font(named: ["Menlo-Regular", "Menlo"], size: clampedSize)
         case .monaco:
@@ -170,6 +170,10 @@ enum AppWindowMaterialPreference: String, CaseIterable, Codable, Identifiable {
     case solid
     case nativeWindow
     case translucent
+
+    static var allCases: [AppWindowMaterialPreference] {
+        [.solid, .translucent]
+    }
 
     var id: String {
         rawValue

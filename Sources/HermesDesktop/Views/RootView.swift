@@ -141,13 +141,12 @@ struct RootView: View {
 
     @ViewBuilder
     private var backgroundImageView: some View {
-        if let backgroundImageURL = appState.connectionStore.backgroundImageURL,
-           let nsImage = NSImage(contentsOf: backgroundImageURL) {
+        if let backgroundImage = appState.connectionStore.backgroundImageDisplay {
             GeometryReader { geometry in
                 ZStack {
                     windowMaterialBackground
 
-                    Image(nsImage: nsImage)
+                    Image(nsImage: backgroundImage.image)
                         .resizable()
                         .aspectRatio(contentMode: backgroundImageContentMode)
                         .frame(width: geometry.size.width, height: geometry.size.height)
@@ -174,12 +173,8 @@ struct RootView: View {
     @ViewBuilder
     private var windowMaterialBackground: some View {
         switch appState.connectionStore.windowMaterial {
-        case .solid:
+        case .solid, .nativeWindow:
             HermesTheme.appBackground
-                .ignoresSafeArea()
-        case .nativeWindow:
-            Rectangle()
-                .fill(.windowBackground)
                 .ignoresSafeArea()
         case .translucent:
             Rectangle()

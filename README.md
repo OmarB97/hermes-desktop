@@ -267,8 +267,9 @@ It gives the real Hermes workflow a native workbench:
   Discovers remote `SKILL.md` files, reads skill metadata, and lets you create
   or edit skills anchored to the Hermes skills store.
 - `Terminal`
-  Opens a real SSH shell inside the app, with tabs, theme presets, color
-  controls, and enough room for multi-profile, multi-agent work.
+  Opens a real SSH shell inside the app, with tabs, theme presets, font
+  controls, background-image transparency, and enough room for multi-profile,
+  multi-agent work.
 
 ## Which chat surface to use
 
@@ -396,8 +397,9 @@ Hermes state.
 
 Some local app preferences and connection details are stored under
 `~/Library/Application Support/HermesDesktop`. That includes connection
-profiles, pinned sessions, bookmarked files, and workflow presets. The current
-local state is documented in [SECURITY.md](SECURITY.md).
+profiles, pinned sessions, bookmarked files, workflow presets, sidebar order,
+and appearance preferences such as terminal font/theme and optional background
+image assets. The current local state is documented in [SECURITY.md](SECURITY.md).
 
 ### Why do I still need SSH working in Terminal first?
 
