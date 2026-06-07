@@ -21,12 +21,12 @@ struct KanbanView: View {
     @State private var cachedDisplayStatuses: [KanbanTaskStatus] = KanbanTaskStatus.boardStatuses
 
     var body: some View {
-        HermesCollapsibleHSplitView(layout: $splitLayout, detailMinWidth: HermesSplitMetrics.WorkbenchDetail.standardMinWidth) {
+        HermesCollapsibleHSplitView(layout: $splitLayout, detailMinWidth: HermesSplitMetrics.WorkbenchDetail.minWidth) {
             primaryContent
         } detail: {
             detailContent
                 .hermesSplitDetailColumn(
-                    minWidth: HermesSplitMetrics.WorkbenchDetail.standardMinWidth,
+                    minWidth: HermesSplitMetrics.WorkbenchDetail.minWidth,
                     idealWidth: HermesSplitMetrics.WorkbenchDetail.standardIdealWidth
                 )
         }

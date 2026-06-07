@@ -292,11 +292,11 @@ struct RootView: View {
 
         switch appState.selectedSection {
         case .sessions:
-            return HermesSplitMetrics.WorkbenchDetail.standardMinWidth
+            return HermesSplitMetrics.WorkbenchDetail.minWidth
         case .cronjobs, .workflows, .files:
-            return HermesSplitMetrics.WorkbenchDetail.editorMinWidth
+            return HermesSplitMetrics.WorkbenchDetail.minWidth
         case .kanban, .skills:
-            return HermesSplitMetrics.WorkbenchDetail.standardMinWidth
+            return HermesSplitMetrics.WorkbenchDetail.minWidth
         case .connections, .usage, .terminal:
             return nil
         }

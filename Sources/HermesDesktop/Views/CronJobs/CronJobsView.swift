@@ -18,7 +18,7 @@ struct CronJobsView: View {
     }
 
     var body: some View {
-        HermesCollapsibleHSplitView(layout: $splitLayout, detailMinWidth: HermesSplitMetrics.WorkbenchDetail.editorMinWidth) {
+        HermesCollapsibleHSplitView(layout: $splitLayout, detailMinWidth: HermesSplitMetrics.WorkbenchDetail.minWidth) {
             VStack(alignment: .leading, spacing: 18) {
                 HermesPageHeader(
                     title: "Cron Jobs",
@@ -42,7 +42,7 @@ struct CronJobsView: View {
         } detail: {
             detailContent
                 .hermesSplitDetailColumn(
-                    minWidth: HermesSplitMetrics.WorkbenchDetail.editorMinWidth,
+                    minWidth: HermesSplitMetrics.WorkbenchDetail.minWidth,
                     idealWidth: HermesSplitMetrics.WorkbenchDetail.formIdealWidth
                 )
         }
@@ -69,21 +69,23 @@ struct CronJobsView: View {
     }
 
     private var filterBar: some View {
-        HStack(spacing: 10) {
+        HermesWrappingFlowLayout(horizontalSpacing: 10, verticalSpacing: 8) {
             Picker(L10n.string("Filter"), selection: $filterMode) {
                 ForEach(CronFilterMode.allCases, id: \.self) { mode in
                     Text(L10n.string(mode.rawValue)).tag(mode)
                 }
             }
             .pickerStyle(.segmented)
+            .labelsHidden()
             .frame(width: 180)
+            .fixedSize(horizontal: true, vertical: false)
 
             HermesCreateActionButton("New Job", help: "Create a new cron job") {
                 startCreating()
             }
             .disabled(appState.isSavingCronJobDraft || appState.isOperatingOnCronJob)
+            .fixedSize(horizontal: true, vertical: false)
         }
-        .fixedSize(horizontal: true, vertical: false)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 

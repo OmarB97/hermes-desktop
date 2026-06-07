@@ -12,7 +12,7 @@ struct FilesView: View {
     @State private var showRemoveBookmarkAlert = false
 
     var body: some View {
-        HermesCollapsibleHSplitView(layout: $splitLayout, detailMinWidth: HermesSplitMetrics.WorkbenchDetail.editorMinWidth) {
+        HermesCollapsibleHSplitView(layout: $splitLayout, detailMinWidth: HermesSplitMetrics.WorkbenchDetail.minWidth) {
             VStack(alignment: .leading, spacing: 18) {
                 HermesPageHeader(
                     title: "Files",
@@ -28,7 +28,7 @@ struct FilesView: View {
         } detail: {
             editorPane
                 .hermesSplitDetailColumn(
-                    minWidth: HermesSplitMetrics.WorkbenchDetail.editorMinWidth,
+                    minWidth: HermesSplitMetrics.WorkbenchDetail.minWidth,
                     idealWidth: HermesSplitMetrics.WorkbenchDetail.editorIdealWidth
                 )
         }

@@ -9,7 +9,7 @@ struct SkillsView: View {
     @State private var rawMarkdownContent = ""
 
     var body: some View {
-        HermesCollapsibleHSplitView(layout: $splitLayout, detailMinWidth: HermesSplitMetrics.WorkbenchDetail.standardMinWidth) {
+        HermesCollapsibleHSplitView(layout: $splitLayout, detailMinWidth: HermesSplitMetrics.WorkbenchDetail.minWidth) {
             VStack(alignment: .leading, spacing: 18) {
                 HermesPageHeader(
                     title: "Skills",
@@ -33,7 +33,7 @@ struct SkillsView: View {
         } detail: {
             detailContent
                 .hermesSplitDetailColumn(
-                    minWidth: HermesSplitMetrics.WorkbenchDetail.standardMinWidth,
+                    minWidth: HermesSplitMetrics.WorkbenchDetail.minWidth,
                     idealWidth: HermesSplitMetrics.WorkbenchDetail.standardIdealWidth
                 )
         }

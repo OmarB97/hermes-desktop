@@ -122,8 +122,7 @@ enum HermesSplitMetrics {
     }
 
     enum WorkbenchDetail {
-        static let standardMinWidth: CGFloat = 420
-        static let editorMinWidth: CGFloat = 460
+        static let minWidth: CGFloat = 460
         static let sessionsIdealWidth: CGFloat = 520
         static let standardIdealWidth: CGFloat = 560
         static let formIdealWidth: CGFloat = 600
@@ -133,7 +132,7 @@ enum HermesSplitMetrics {
     static let minimumWindowWidth =
         WorkspaceSidebar.minWidth +
         WorkbenchBrowser.minWidth +
-        WorkbenchDetail.editorMinWidth +
+        WorkbenchDetail.minWidth +
         (HermesSplitLayout.resizeHandleWidth * 2)
 
     static var standardWorkbenchBrowserLayout: HermesSplitLayout {
