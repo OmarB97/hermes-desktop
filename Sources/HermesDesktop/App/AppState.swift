@@ -109,6 +109,7 @@ final class AppState: ObservableObject {
     private var sessionScrollOffsets: [String: CGFloat] = [:]
     private var sessionMessageSignature = SessionMessageSignature(messages: [])
     private var connectionTestRequestID: UUID?
+    private var overviewRefreshWorkspaceFingerprint: String?
     private var hasPerformedAutomaticUpdateCheck = false
     private let automaticUpdateCheckInterval: TimeInterval = 24 * 60 * 60
     private var statusTask: Task<Void, Never>?
@@ -657,9 +658,22 @@ final class AppState: ObservableObject {
 
     func refreshOverview(manual: Bool = false) async {
         guard let profile = activeConnection else { return }
+        let workspaceFingerprint = profile.workspaceScopeFingerprint
         if manual {
             guard !isRefreshingOverview, !isBusy else { return }
-            isRefreshingOverview = true
+        } else {
+            guard overviewRefreshWorkspaceFingerprint != workspaceFingerprint else { return }
+        }
+
+        overviewRefreshWorkspaceFingerprint = workspaceFingerprint
+        isRefreshingOverview = true
+
+        defer {
+            if overviewRefreshWorkspaceFingerprint == workspaceFingerprint {
+                isBusy = false
+                isRefreshingOverview = false
+                overviewRefreshWorkspaceFingerprint = nil
+            }
         }
 
         do {
@@ -669,16 +683,8 @@ final class AppState: ObservableObject {
             guard isActiveWorkspace(profile) else { return }
             overview = discovery
             lastOverviewRefreshedAt = Date()
-            isBusy = false
-            if manual {
-                isRefreshingOverview = false
-            }
         } catch {
             guard isActiveWorkspace(profile) else { return }
-            isBusy = false
-            if manual {
-                isRefreshingOverview = false
-            }
             overview = nil
             overviewError = error.localizedDescription
             setStatusMessage(L10n.string("Unable to refresh remote discovery"))
@@ -2757,8 +2763,10 @@ final class AppState: ObservableObject {
     private func resetWorkspaceStateForConnectionChange(closeTerminalTabs: Bool = true) {
         isBusy = false
         connectionTestRequestID = nil
+        overviewRefreshWorkspaceFingerprint = nil
         overview = nil
         overviewError = nil
+        lastOverviewRefreshedAt = nil
         isRefreshingOverview = false
         sessions = []
         clearSessionMessages()

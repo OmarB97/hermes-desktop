@@ -1004,6 +1004,8 @@
 "Press Run Diagnostics or Test Connection to check this host." = "Press Run Diagnostics or Test Connection to check this host.";
 "Refresh Profiles" = "Refresh Profiles";
 "Refresh Settings after the host is reachable." = "Refresh Settings after the host is reachable.";
+"Remove host?" = "Remove host?";
+"Remove Host" = "Remove Host";
 "Run Diagnostics" = "Run Diagnostics";
 "See recent conversations and history." = "See recent conversations and history.";
 "Settings" = "Settings";
@@ -1021,7 +1023,9 @@
 "Test Connection" = "Test Connection";
 "Terminal Appearance" = "Terminal Appearance";
 "This permanently deletes %@ from the host. This cannot be undone." = "This permanently deletes %@ from the host. This cannot be undone.";
+"This removes the host from Hermes Desktop. Remote files and Hermes profiles on the host are not deleted." = "This removes the host from Hermes Desktop. Remote files and Hermes profiles on the host are not deleted.";
 "This removes the profile directory from the host." = "This removes the profile directory from the host.";
+"“%@” will be removed from Hermes Desktop. Remote files and Hermes profiles on the host are not deleted." = "“%@” will be removed from Hermes Desktop. Remote files and Hermes profiles on the host are not deleted.";
 "Choose the app appearance." = "Choose the app appearance.";
 "View Sessions" = "View Sessions";
 "Track Profile" = "Track Profile";

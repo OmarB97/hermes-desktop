@@ -1004,6 +1004,8 @@
 "Press Run Diagnostics or Test Connection to check this host." = "Нажмите «Запустить диагностику» или «Проверить подключение», чтобы проверить этот хост.";
 "Refresh Profiles" = "Обновить профили";
 "Refresh Settings after the host is reachable." = "Обновите настройки после того, как хост станет доступен.";
+"Remove host?" = "Remove host?";
+"Remove Host" = "Remove Host";
 "Run Diagnostics" = "Запустить диагностику";
 "See recent conversations and history." = "Просматривайте недавние диалоги и историю.";
 "Settings" = "Настройки";
@@ -1021,7 +1023,9 @@
 "Test Connection" = "Проверить подключение";
 "Terminal Appearance" = "Внешний вид терминала";
 "This permanently deletes %@ from the host. This cannot be undone." = "Это навсегда удалит %@ с хоста. Действие нельзя отменить.";
+"This removes the host from Hermes Desktop. Remote files and Hermes profiles on the host are not deleted." = "This removes the host from Hermes Desktop. Remote files and Hermes profiles on the host are not deleted.";
 "This removes the profile directory from the host." = "Это удалит папку профиля с хоста.";
+"“%@” will be removed from Hermes Desktop. Remote files and Hermes profiles on the host are not deleted." = "“%@” will be removed from Hermes Desktop. Remote files and Hermes profiles on the host are not deleted.";
 "Choose the app appearance." = "Выберите внешний вид приложения.";
 "View Sessions" = "Открыть сессии";
 "Track Profile" = "Отслеживать профиль";

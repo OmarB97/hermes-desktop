@@ -6,14 +6,12 @@ struct ConnectionsView: View {
     @Environment(\.openURL) private var openURL
     @EnvironmentObject private var appState: AppState
 
-    @State private var editingConnection = ConnectionProfile()
-    @State private var editorPresentationID = UUID()
-    @State private var isPresentingEditor = false
-    @State private var editingExistingConnection = false
+    @State private var editorPresentation: ConnectionEditorPresentation?
     @State private var isPresentingProfiles = false
     @State private var inspectorTab: SettingsInspectorTab = .overview
     @State private var profilePendingDelete: RemoteHermesProfile?
     @State private var profilePendingStopTracking: RemoteHermesProfile?
+    @State private var hostPendingRemoval: ConnectionProfile?
 
     private let documentationURL = URL(string: "https://dodo-reach.github.io/hermes-desktop/")!
 
@@ -42,14 +40,13 @@ struct ConnectionsView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .sheet(isPresented: $isPresentingEditor) {
+        .sheet(item: $editorPresentation) { presentation in
             ConnectionEditorSheet(
-                connection: editingConnection,
-                isEditing: editingExistingConnection
+                connection: presentation.connection,
+                isEditing: presentation.isEditing
             ) { updatedConnection in
                 appState.saveConnection(updatedConnection)
             }
-            .id(editorPresentationID)
         }
         .sheet(isPresented: $isPresentingProfiles) {
             ManageProfilesSheet(
@@ -95,6 +92,28 @@ struct ConnectionsView: View {
             }
         } message: {
             Text(deleteProfileConfirmationMessage)
+        }
+        .alert(
+            L10n.string("Remove host?"),
+            isPresented: Binding(
+                get: { hostPendingRemoval != nil },
+                set: { if !$0 { hostPendingRemoval = nil } }
+            )
+        ) {
+            Button(L10n.string("Remove Host"), role: .destructive) {
+                guard let host = hostPendingRemoval else { return }
+                hostPendingRemoval = nil
+                if editorPresentation?.connection.id == host.id {
+                    editorPresentation = nil
+                }
+                appState.deleteConnection(host)
+            }
+
+            Button(L10n.string("Cancel"), role: .cancel) {
+                hostPendingRemoval = nil
+            }
+        } message: {
+            Text(removeHostConfirmationMessage)
         }
         .alert(
             L10n.string("Stop tracking this profile?"),
@@ -466,6 +485,14 @@ struct ConnectionsView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
 
+                Button(role: .destructive) {
+                    hostPendingRemoval = activeConnection
+                } label: {
+                    Label(L10n.string("Remove Host"), systemImage: "trash")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
                 hostSelectionMenu
 
                 Button {
@@ -639,6 +666,13 @@ struct ConnectionsView: View {
         return L10n.string("This permanently deletes %@ from the host. This cannot be undone.", profilePendingDelete.path)
     }
 
+    private var removeHostConfirmationMessage: String {
+        guard let hostPendingRemoval else {
+            return L10n.string("This removes the host from Hermes Desktop. Remote files and Hermes profiles on the host are not deleted.")
+        }
+        return L10n.string("“%@” will be removed from Hermes Desktop. Remote files and Hermes profiles on the host are not deleted.", hostPendingRemoval.label)
+    }
+
     private func workspaceFields(_ connection: ConnectionProfile) -> [HermesInspectorField] {
         [
             HermesInspectorField(label: "Workspace", value: connection.label, emphasizeValue: true),
@@ -674,10 +708,7 @@ struct ConnectionsView: View {
     }
 
     private func presentEditor(for connection: ConnectionProfile, isEditing: Bool) {
-        editingConnection = connection
-        editingExistingConnection = isEditing
-        editorPresentationID = UUID()
-        isPresentingEditor = true
+        editorPresentation = ConnectionEditorPresentation(connection: connection, isEditing: isEditing)
     }
 
     private func presentPendingNewConnectionEditorIfNeeded() {
@@ -685,6 +716,12 @@ struct ConnectionsView: View {
         presentEditor(for: ConnectionProfile(), isEditing: false)
         appState.consumeNewConnectionEditorRequest(requestID)
     }
+}
+
+private struct ConnectionEditorPresentation: Identifiable {
+    let id = UUID()
+    let connection: ConnectionProfile
+    let isEditing: Bool
 }
 
 private enum SettingsInspectorTab: String, CaseIterable, Identifiable {

@@ -1004,6 +1004,8 @@
 "Press Run Diagnostics or Test Connection to check this host." = "点击“运行诊断”或“测试连接”来检查此主机。";
 "Refresh Profiles" = "刷新配置";
 "Refresh Settings after the host is reachable." = "主机可访问后刷新设置。";
+"Remove host?" = "Remove host?";
+"Remove Host" = "Remove Host";
 "Run Diagnostics" = "运行诊断";
 "See recent conversations and history." = "查看最近的对话和历史记录。";
 "Settings" = "设置";
@@ -1021,7 +1023,9 @@
 "Test Connection" = "测试连接";
 "Terminal Appearance" = "终端外观";
 "This permanently deletes %@ from the host. This cannot be undone." = "这会从主机永久删除 %@。此操作无法撤销。";
+"This removes the host from Hermes Desktop. Remote files and Hermes profiles on the host are not deleted." = "This removes the host from Hermes Desktop. Remote files and Hermes profiles on the host are not deleted.";
 "This removes the profile directory from the host." = "这会从主机删除配置目录。";
+"“%@” will be removed from Hermes Desktop. Remote files and Hermes profiles on the host are not deleted." = "“%@” will be removed from Hermes Desktop. Remote files and Hermes profiles on the host are not deleted.";
 "Choose the app appearance." = "选择应用外观。";
 "View Sessions" = "查看会话";
 "Track Profile" = "跟踪配置";
