@@ -370,6 +370,14 @@
       padding: 0.12rem 0.35rem;
     }
 
+    .command-block {
+      display: block;
+      margin: 0.7rem 0;
+      overflow-x: auto;
+      padding: 0.7rem 0.8rem;
+      white-space: nowrap;
+    }
+
     .prereqs code {
       background: rgba(255, 248, 241, 0.12);
     }
@@ -693,7 +701,7 @@
         <div class="card">
           <div class="micro">03 · First launch</div>
           <h3>Right-click → Open</h3>
-          <p>macOS will warn that the app is not notarized. Right-click the app, choose Open, then Open again. Don't move it to the bin.</p>
+          <p>On most supported macOS versions, right-click the app, choose Open, then confirm. macOS 26.5.1 has an additional checksum-first workaround below.</p>
         </div>
       </div>
       <div class="prereqs">
@@ -723,9 +731,13 @@
         <details>
           <summary>Why does macOS say the app can't be verified or is damaged?</summary>
           <div class="faq-body">
-            <p>Hermes Desktop is currently ad-hoc signed and not notarized by Apple. The Gatekeeper warning is expected for this distribution model and does not mean the app contains malware.</p>
-            <p>To open it: click <strong>Done</strong> (not "Move to Bin"), then right-click <code>HermesDesktop.app</code> in Applications and choose <strong>Open</strong>. macOS will ask once to confirm.</p>
-            <p>Do not disable Gatekeeper or run <code>sudo</code> commands to install the app. If you'd rather not trust the release zip, build from source.</p>
+            <p>Hermes Desktop is currently ad-hoc signed and not notarized by Apple. The Gatekeeper warning is expected for this distribution model and does not by itself mean that macOS found malware.</p>
+            <p>On most supported macOS versions, click <strong>Done</strong> (not "Move to Bin"), then right-click <code>HermesDesktop.app</code> in Applications and choose <strong>Open</strong>. If available, you can also use <strong>Open Anyway</strong> in Privacy &amp; Security.</p>
+            <p>On some Macs running <strong>macOS 26.5.1 (build 25F80)</strong>, Gatekeeper may instead say that the app is damaged and offer no override. Only for that version and exact alert, first compare the downloaded zip with <code>HermesDesktop.app.zip.sha256</code> from the same GitHub Release. Do not continue if the values differ.</p>
+            <p>After moving the verified app to Applications, run:</p>
+            <code class="command-block">xattr -dr com.apple.quarantine "/Applications/HermesDesktop.app"</code>
+            <code class="command-block">open "/Applications/HermesDesktop.app"</code>
+            <p>This removes browser quarantine from Hermes Desktop only; it does not disable Gatekeeper globally and does not require <code>sudo</code>. The free alternative is to inspect the source and run <code>./scripts/build-macos-app.sh</code>; a local build does not inherit browser download quarantine.</p>
           </div>
         </details>
         <details>

@@ -61,7 +61,48 @@ not collide between the two.
 
 - universal macOS build for Apple Silicon and Intel
 - ad-hoc signed and not notarized by Apple
-- first launch may require right-click → Open / Open Anyway
+- on most supported macOS versions, first launch may require right-click →
+  Open / Open Anyway
 - release archive: `HermesDesktop.app.zip`
 - checksum: `HermesDesktop.app.zip.sha256`
 - manifest: `HermesDesktop.app.zip.manifest.json`
+
+### macOS 26.5.1 Gatekeeper note
+
+On some Macs running macOS 26.5.1 (build 25F80), Gatekeeper may say that the
+downloaded app "is damaged and can't be opened" and may not offer `Open
+Anyway`. This note applies only to that version and build when that exact alert
+appears.
+
+Before continuing, verify the v1.2.0 archive:
+
+```bash
+shasum -a 256 ~/Downloads/HermesDesktop.app.zip
+```
+
+The v1.2.0 result must be:
+
+```text
+34ef72ea39e76659f81ceecbc1c42fd970ba1478bed9257d7f3e68306917057d
+```
+
+Do not continue if it differs. After extracting the verified zip and moving
+the app into Applications, remove the browser quarantine from Hermes Desktop
+only and open it:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/HermesDesktop.app"
+open "/Applications/HermesDesktop.app"
+```
+
+This does not disable Gatekeeper globally and does not require `sudo`.
+
+Alternatively, inspect the source and build locally. The resulting app does
+not inherit browser download quarantine:
+
+```bash
+git clone https://github.com/dodo-reach/hermes-desktop.git
+cd hermes-desktop
+./scripts/build-macos-app.sh
+open "dist/HermesDesktop.app"
+```

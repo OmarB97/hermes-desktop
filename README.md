@@ -142,19 +142,59 @@ ssh your-host
 4. Drag `HermesDesktop.app` into `Applications` and replace the old copy if
    macOS asks.
 5. First launch: right click `HermesDesktop.app`, choose `Open`, then confirm
-   `Open`.
+   `Open`. This remains the normal first-launch path on supported macOS
+   versions.
 
 Hermes Desktop is currently ad-hoc signed and not notarized by Apple. macOS may
 show a first-launch warning saying Apple cannot verify it for malware. That is
 expected for this distribution model and does not mean macOS found malware in
 Hermes Desktop.
 
-If macOS blocks the first launch:
+If macOS shows the usual unidentified-developer warning:
 
 1. Click `Done`, not `Move to Bin`.
 2. Right click `HermesDesktop.app` and choose `Open`.
 3. If needed, go to `System Settings` > `Privacy & Security` and click
    `Open Anyway`.
+
+### macOS 26.5.1 shows that the app is damaged
+
+On some Macs running macOS 26.5.1 (build 25F80), Gatekeeper may instead say
+that Hermes Desktop "is damaged and can't be opened" and may not offer
+`Open Anyway`. The additional steps below are only for that macOS version and
+build when that exact alert appears.
+
+First, verify that the zip came from the official GitHub Release. Run:
+
+```bash
+shasum -a 256 ~/Downloads/HermesDesktop.app.zip
+```
+
+Compare the result with `HermesDesktop.app.zip.sha256` attached to the same
+release. Do not continue if the values differ. After extracting the verified
+zip and moving `HermesDesktop.app` to Applications, remove the browser
+quarantine from this app only, then open it:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/HermesDesktop.app"
+open "/Applications/HermesDesktop.app"
+```
+
+These commands do not disable Gatekeeper globally and do not require `sudo`.
+They remove the download quarantine only from the verified Hermes Desktop app.
+
+### Build locally instead
+
+The free alternative with the clearest trust path is to inspect the source and
+build Hermes Desktop locally. A local build does not inherit browser download
+quarantine:
+
+```bash
+git clone https://github.com/dodo-reach/hermes-desktop.git
+cd hermes-desktop
+./scripts/build-macos-app.sh
+open "dist/HermesDesktop.app"
+```
 
 Do not disable Gatekeeper or run `sudo` commands to install Hermes Desktop.
 
@@ -390,7 +430,9 @@ does not update Hermes Agent and does not send your connection, profile, file,
 session, or Kanban content.
 
 The current public build is ad-hoc signed and not notarized by Apple, so
-macOS may show a first-launch warning. Cautious users should read
+macOS may show a first-launch warning. On some Macs running macOS 26.5.1
+(build 25F80), Gatekeeper may show a stronger "damaged" alert; follow the
+version-specific, checksum-first instructions above. Cautious users should read
 [SECURITY.md](SECURITY.md), read [docs/distribution.md](docs/distribution.md),
 and consider building from source.
 
