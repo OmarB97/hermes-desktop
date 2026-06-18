@@ -132,13 +132,16 @@ depends on the environment it connects to.
 
 The app assumes:
 
-- your Mac already has a working SSH path to the target host
-- the host already has `python3`
-- the host already has `hermes` on the non-interactive SSH `PATH` for in-app
-  chat and resume flows
+- `python3` is available on the machine where Hermes runs
+- Hermes data lives under `~/.hermes`, a named profile, or the configured
+  custom Hermes home
+- `hermes` is available through the app's prepared PATH for in-app chat,
+  terminal resume, and workflow launches
 
-The app then uses SSH to execute remote commands on that host. See
-[../SECURITY.md](../SECURITY.md) for the runtime security model.
+For direct-local mode, commands run on this Mac with the current macOS user's
+permissions. For SSH mode, your Mac must already have a working
+non-interactive SSH path to the target host. See [../SECURITY.md](../SECURITY.md)
+for the runtime security model.
 
 ## Honest Limitation
 

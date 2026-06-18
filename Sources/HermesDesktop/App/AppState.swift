@@ -566,7 +566,11 @@ final class AppState: ObservableObject {
         guard !profile.isDefault && profile.name != "default" else {
             activeAlert = AppAlert(
                 title: L10n.string("Default profile cannot be deleted"),
-                message: L10n.string("Hermes Desktop will not delete ~/.hermes from the host. Use Stop Tracking if you only want to hide the profile locally.")
+                message: L10n.string(
+                    activeConnection.kind == .local
+                        ? "Hermes Desktop will not delete ~/.hermes from this Mac. Use Stop Tracking if you only want to hide the profile in the app."
+                        : "Hermes Desktop will not delete ~/.hermes from the host. Use Stop Tracking if you only want to hide the profile locally."
+                )
             )
             return
         }
@@ -636,14 +640,23 @@ final class AppState: ObservableObject {
                 guard connectionTestRequestID == requestID else { return }
                 isBusy = false
                 let home = response.remoteHome.trimmingCharacters(in: .whitespacesAndNewlines)
-                setStatusMessage(L10n.string("SSH and python3 OK for %@", profile.label))
-                let messageLines = [
-                    L10n.string("SSH and python3 are available for this Hermes host."),
-                    home.isEmpty ? nil : L10n.string("Remote HOME: %@", home)
-                ].compactMap { $0 }
+                setStatusMessage(
+                    profile.kind == .local
+                        ? L10n.string("Local Hermes and python3 OK for %@", profile.label)
+                        : L10n.string("SSH and python3 OK for %@", profile.label)
+                )
+                let messageLines: [String?] = profile.kind == .local
+                    ? [
+                        L10n.string("Hermes Desktop can run local commands with python3 using your current macOS account."),
+                        home.isEmpty ? nil : L10n.string("Local HOME: %@", home)
+                    ]
+                    : [
+                        L10n.string("SSH and python3 are available for this Hermes host."),
+                        home.isEmpty ? nil : L10n.string("Remote HOME: %@", home)
+                    ]
                 activeAlert = AppAlert(
                     title: L10n.string("Connection OK"),
-                    message: messageLines.joined(separator: "\n")
+                    message: messageLines.compactMap { $0 }.joined(separator: "\n")
                 )
             } catch {
                 guard connectionTestRequestID == requestID else { return }
@@ -687,7 +700,11 @@ final class AppState: ObservableObject {
             guard isActiveWorkspace(profile) else { return }
             overview = nil
             overviewError = error.localizedDescription
-            setStatusMessage(L10n.string("Unable to refresh remote discovery"))
+            setStatusMessage(L10n.string(
+                profile.kind == .local
+                    ? "Unable to refresh local discovery"
+                    : "Unable to refresh remote discovery"
+            ))
         }
     }
 
@@ -935,7 +952,7 @@ final class AppState: ObservableObject {
             guard isActiveWorkspace(profile) else { return }
             isLoadingWorkspaceFileBrowser = false
             workspaceFileBrowserError = error.localizedDescription
-            setStatusMessage(L10n.string("Unable to browse remote files"))
+            setStatusMessage(L10n.string("Unable to browse files"))
         }
     }
 
@@ -1232,7 +1249,11 @@ final class AppState: ObservableObject {
             await loadSessions(reset: true)
             await loadUsage(forceRefresh: true)
             isDeletingSession = false
-            setStatusMessage(L10n.string("Session deleted locally and on the remote Hermes host"))
+            setStatusMessage(L10n.string(
+                profile.kind == .local
+                    ? "Session deleted from this Mac’s real Hermes data"
+                    : "Session deleted locally and on the remote Hermes host"
+            ))
         } catch {
             guard isActiveWorkspace(profile) else { return }
             isDeletingSession = false

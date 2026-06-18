@@ -97,16 +97,11 @@ final class TerminalViewHost: NSObject, LocalProcessTerminalViewDelegate {
         initialInputTask?.cancel()
         initialInputTask = nil
 
-        let environment = [
-            "TERM=xterm-256color",
-            "COLORTERM=truecolor"
-        ]
-
         hostView.terminalView.startProcess(
-            executable: "/usr/bin/ssh",
-            args: request.sshArguments,
-            environment: environment,
-            execName: "ssh"
+            executable: request.processLaunch.executablePath,
+            args: request.processLaunch.arguments,
+            environment: request.processLaunch.environment,
+            execName: request.processLaunch.executableName
         )
         onProcessStart?()
         if let workflowLaunchDiagnosticsContext = request.workflowLaunchDiagnosticsContext {
@@ -239,7 +234,7 @@ final class TerminalViewHost: NSObject, LocalProcessTerminalViewDelegate {
 }
 
 struct TerminalLaunchRequest {
-    let sshArguments: [String]
+    let processLaunch: ProcessLaunch
     let launchToken: UUID
     let initialInput: String?
     let workflowLaunchDiagnostics: WorkflowLaunchDiagnostics

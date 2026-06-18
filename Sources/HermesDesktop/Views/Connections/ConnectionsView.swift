@@ -20,7 +20,7 @@ struct ConnectionsView: View {
             VStack(alignment: .leading, spacing: 22) {
                 HermesPageHeader(
                     title: "Settings",
-                    subtitle: "Manage the active host connection, Hermes profile, and local app preferences."
+                    subtitle: "Manage the active Hermes connection, profile, and local app preferences."
                 )
 
                 ViewThatFits(in: .horizontal) {
@@ -298,10 +298,10 @@ struct ConnectionsView: View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(L10n.string("Host Connection"))
+                        Text(L10n.string("Hermes Connection"))
                             .font(.title3.weight(.semibold))
 
-                        Text(L10n.string("Detailed information about your host connection."))
+                        Text(L10n.string("Detailed information about your active Hermes connection."))
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -324,8 +324,8 @@ struct ConnectionsView: View {
                 } else {
                     EmptySettingsState(
                         systemImage: "network",
-                        title: "Waiting for host",
-                        message: "Add or select a host to see connection details."
+                        title: "Waiting for connection",
+                        message: "Add or select a connection to see details."
                     ) {
                         Button {
                             presentEditor(for: ConnectionProfile(), isEditing: false)
@@ -373,7 +373,9 @@ struct ConnectionsView: View {
                 SettingsActionRow(
                     systemImage: "terminal",
                     title: "Open Terminal",
-                    subtitle: "Start a host-first SSH shell.",
+                    subtitle: appState.activeConnection?.kind == .local
+                        ? "Start a local Hermes shell on this Mac."
+                        : "Start a host-first SSH shell.",
                     action: { appState.requestSectionSelection(.terminal) }
                 )
 
@@ -414,8 +416,8 @@ struct ConnectionsView: View {
             } else if appState.activeConnection == nil {
                 HealthSummaryRow(
                     isHealthy: false,
-                    title: "No host selected",
-                    subtitle: "Add or select a host, then run diagnostics."
+                    title: "No connection selected",
+                    subtitle: "Add or select a connection, then run diagnostics."
                 )
             } else {
                 HealthSummaryRow(
@@ -644,7 +646,7 @@ struct ConnectionsView: View {
     }
 
     private var connectionHealthTitle: String {
-        if appState.activeConnection == nil { return "No host selected" }
+        if appState.activeConnection == nil { return "No connection selected" }
         if appState.overviewError != nil { return "Connection needs attention" }
         return "Connection is healthy"
     }
@@ -654,7 +656,7 @@ struct ConnectionsView: View {
             return overviewError
         }
         if appState.activeConnection == nil {
-            return "Create or select a host to begin discovery."
+            return "Create or select a connection to begin discovery."
         }
         return "Hermes Desktop is connected to your host and ready."
     }
@@ -663,12 +665,18 @@ struct ConnectionsView: View {
         guard let profilePendingDelete else {
             return L10n.string("This removes the profile directory from the host.")
         }
+        if appState.activeConnection?.kind == .local {
+            return L10n.string("This permanently deletes %@ from this Mac using your current macOS account. This cannot be undone.", profilePendingDelete.path)
+        }
         return L10n.string("This permanently deletes %@ from the host. This cannot be undone.", profilePendingDelete.path)
     }
 
     private var removeHostConfirmationMessage: String {
         guard let hostPendingRemoval else {
             return L10n.string("This removes the host from Hermes Desktop. Remote files and Hermes profiles on the host are not deleted.")
+        }
+        if hostPendingRemoval.kind == .local {
+            return L10n.string("“%@” will be removed from Hermes Desktop. Hermes files and profiles on this Mac are not deleted.", hostPendingRemoval.label)
         }
         return L10n.string("“%@” will be removed from Hermes Desktop. Remote files and Hermes profiles on the host are not deleted.", hostPendingRemoval.label)
     }
@@ -682,13 +690,17 @@ struct ConnectionsView: View {
     }
 
     private func inspectorFields(_ connection: ConnectionProfile) -> [HermesInspectorField] {
-        [
+        var fields = [
             HermesInspectorField(label: "Host", value: connection.label, emphasizeValue: true),
-            HermesInspectorField(label: "Address", value: connection.effectiveTarget, isMonospaced: true),
-            HermesInspectorField(label: "Port", value: connection.resolvedPort.map { "\($0) (SSH)" } ?? "Default"),
+            HermesInspectorField(label: "Type", value: connection.kind == .local ? "This Mac" : "SSH Host"),
             HermesInspectorField(label: "Profile", value: connection.resolvedHermesProfileName, isMonospaced: true),
             HermesInspectorField(label: "Last Checked", value: lastCheckedText)
         ]
+        if connection.kind == .ssh {
+            fields.insert(HermesInspectorField(label: "Address", value: connection.effectiveTarget, isMonospaced: true), at: 2)
+            fields.insert(HermesInspectorField(label: "Port", value: connection.resolvedPort.map { "\($0) (SSH)" } ?? "Default"), at: 3)
+        }
+        return fields
     }
 
     private var lastCheckedText: String {

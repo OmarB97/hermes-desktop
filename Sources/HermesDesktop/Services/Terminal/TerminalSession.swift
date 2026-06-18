@@ -3,7 +3,7 @@ import Foundation
 @MainActor
 final class TerminalSession: ObservableObject, @unchecked Sendable {
     let connection: ConnectionProfile
-    let sshArguments: [String]
+    let processLaunch: ProcessLaunch
     let startupInput: String?
     let workflowLaunchDiagnosticsContext: WorkflowLaunchDiagnosticsContext?
     private let workflowLaunchDiagnostics: WorkflowLaunchDiagnostics
@@ -28,7 +28,7 @@ final class TerminalSession: ObservableObject, @unchecked Sendable {
         self.startupInput = startupInput
         self.workflowLaunchDiagnostics = workflowLaunchDiagnostics
         self.workflowLaunchDiagnosticsContext = workflowLaunchDiagnosticsContext
-        self.sshArguments = sshTransport.shellArguments(
+        self.processLaunch = sshTransport.terminalLaunch(
             for: connection,
             startupCommandLine: startupCommandLine
         )
@@ -94,7 +94,7 @@ final class TerminalSession: ObservableObject, @unchecked Sendable {
         viewHost.mount(
             in: container,
             request: TerminalLaunchRequest(
-                sshArguments: sshArguments,
+                processLaunch: processLaunch,
                 launchToken: launchToken,
                 initialInput: startupInput,
                 workflowLaunchDiagnostics: workflowLaunchDiagnostics,

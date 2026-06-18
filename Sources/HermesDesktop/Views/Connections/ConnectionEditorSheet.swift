@@ -33,60 +33,75 @@ struct ConnectionEditorSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     HermesPageHeader(
-                        title: isEditing ? "Edit Host" : "New Host",
-                        subtitle: "Set the SSH details Hermes Desktop should use for discovery, file editing, sessions and terminal access."
+                        title: isEditing ? "Edit Connection" : "New Connection",
+                        subtitle: "Connect directly to Hermes on this Mac or use an SSH host."
                     )
 
                     HermesSurfacePanel(
                         title: "Connection Details",
-                        subtitle: "Give the host a clear name, then prefer an SSH alias whenever you have one."
+                        subtitle: "Choose where Hermes runs, then give the connection a clear name."
                     ) {
                         VStack(alignment: .leading, spacing: 14) {
+                            Picker(L10n.string("Connection Type"), selection: $draft.kind) {
+                                Text(L10n.string("This Mac")).tag(ConnectionKind.local)
+                                Text(L10n.string("SSH Host")).tag(ConnectionKind.ssh)
+                            }
+                            .pickerStyle(.segmented)
+
                             EditorField(label: "Name") {
                                 TextField(L10n.string("Home Pi, Studio Mac, Prod VPS"), text: $draft.label)
                                     .focused($focusedField, equals: .label)
                                     .textFieldStyle(.roundedBorder)
                             }
 
-                            EditorField(label: "SSH alias") {
-                                TextField(L10n.string("hermes-home"), text: $draft.sshAlias)
-                                    .focused($focusedField, equals: .alias)
-                                    .textFieldStyle(.roundedBorder)
-                            }
-
-                            EditorField(label: "Host or IP address") {
-                                TextField(L10n.string("mac-studio.local, 203.0.113.10, localhost"), text: $draft.sshHost)
-                                    .focused($focusedField, equals: .host)
-                                    .textFieldStyle(.roundedBorder)
-                            }
-
-                            ViewThatFits(in: .horizontal) {
-                                HStack(alignment: .top, spacing: 14) {
-                                    EditorField(label: "SSH user") {
-                                        TextField("alex", text: $draft.sshUser)
-                                            .focused($focusedField, equals: .user)
-                                            .textFieldStyle(.roundedBorder)
-                                    }
-
-                                    EditorField(label: "SSH port") {
-                                        TextField("22", text: $portText)
-                                            .focused($focusedField, equals: .port)
-                                            .textFieldStyle(.roundedBorder)
-                                    }
+                            if draft.kind == .ssh {
+                                EditorField(label: "SSH alias") {
+                                    TextField(L10n.string("hermes-home"), text: $draft.sshAlias)
+                                        .focused($focusedField, equals: .alias)
+                                        .textFieldStyle(.roundedBorder)
                                 }
 
-                                VStack(alignment: .leading, spacing: 14) {
-                                    EditorField(label: "SSH user") {
-                                        TextField("alex", text: $draft.sshUser)
-                                            .focused($focusedField, equals: .user)
-                                            .textFieldStyle(.roundedBorder)
+                                EditorField(label: "Host or IP address") {
+                                    TextField(L10n.string("mac-studio.local, 203.0.113.10, localhost"), text: $draft.sshHost)
+                                        .focused($focusedField, equals: .host)
+                                        .textFieldStyle(.roundedBorder)
+                                }
+
+                                ViewThatFits(in: .horizontal) {
+                                    HStack(alignment: .top, spacing: 14) {
+                                        EditorField(label: "SSH user") {
+                                            TextField("alex", text: $draft.sshUser)
+                                                .focused($focusedField, equals: .user)
+                                                .textFieldStyle(.roundedBorder)
+                                        }
+
+                                        EditorField(label: "SSH port") {
+                                            TextField("22", text: $portText)
+                                                .focused($focusedField, equals: .port)
+                                                .textFieldStyle(.roundedBorder)
+                                        }
                                     }
 
-                                    EditorField(label: "SSH port") {
-                                        TextField("22", text: $portText)
-                                            .focused($focusedField, equals: .port)
-                                            .textFieldStyle(.roundedBorder)
+                                    VStack(alignment: .leading, spacing: 14) {
+                                        EditorField(label: "SSH user") {
+                                            TextField("alex", text: $draft.sshUser)
+                                                .focused($focusedField, equals: .user)
+                                                .textFieldStyle(.roundedBorder)
+                                        }
+
+                                        EditorField(label: "SSH port") {
+                                            TextField("22", text: $portText)
+                                                .focused($focusedField, equals: .port)
+                                                .textFieldStyle(.roundedBorder)
+                                        }
                                     }
+                                }
+                            } else {
+                                HermesInsetSurface {
+                                    Text(L10n.string("Local changes use your current macOS account and affect this Mac’s real Hermes files, profiles, Cron jobs, Kanban data, and sessions."))
+                                        .font(.subheadline)
+                                        .foregroundStyle(.orange)
+                                        .fixedSize(horizontal: false, vertical: true)
                                 }
                             }
 
@@ -100,13 +115,15 @@ struct ConnectionEditorSheet: View {
                                 isExpanded: $showsCustomHermesHomeOptions
                             ) {
                                 VStack(alignment: .leading, spacing: 10) {
-                                    EditorField(label: "Remote Hermes home path") {
+                                    EditorField(label: draft.kind == .local ? "Hermes home path" : "Remote Hermes home path") {
                                         TextField(L10n.string("~/.hermes-work or /opt/data"), text: customHermesHomeBinding)
                                             .focused($focusedField, equals: .customHermesHome)
                                             .textFieldStyle(.roundedBorder)
                                     }
 
-                                    Text(L10n.string("Only use this if Hermes lives outside the standard `~/.hermes` or `~/.hermes/profiles/<name>` layout on the remote host."))
+                                    Text(L10n.string(draft.kind == .local
+                                        ? "Only use this if Hermes lives outside the standard `~/.hermes` or `~/.hermes/profiles/<name>` layout on this Mac."
+                                        : "Only use this if Hermes lives outside the standard `~/.hermes` or `~/.hermes/profiles/<name>` layout on the remote host."))
                                         .font(.subheadline)
                                         .foregroundStyle(.secondary)
                                         .fixedSize(horizontal: false, vertical: true)
@@ -128,7 +145,8 @@ struct ConnectionEditorSheet: View {
                         }
                     }
 
-                    HermesSurfacePanel(
+                    if draft.kind == .ssh {
+                        HermesSurfacePanel(
                         title: "Connection Tips",
                         subtitle: "Use the same SSH setup that works in Terminal."
                     ) {
@@ -161,6 +179,7 @@ struct ConnectionEditorSheet: View {
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                             }
+                        }
                         }
                     }
 
@@ -227,11 +246,11 @@ struct ConnectionEditorSheet: View {
             return "Name is required."
         }
 
-        if candidate.trimmedAlias == nil && candidate.trimmedHost == nil {
+        if candidate.kind == .ssh && candidate.trimmedAlias == nil && candidate.trimmedHost == nil {
             return "Add an SSH alias or host."
         }
 
-        if !hasValidPort {
+        if candidate.kind == .ssh && !hasValidPort {
             return "Enter a valid SSH port from 1 to 65535."
         }
 
