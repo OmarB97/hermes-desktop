@@ -1,48 +1,51 @@
 # Hermes Desktop v1.2.0
 
-Hermes Desktop 1.2.0 adds first-class support for Hermes Agent running directly
-on the same Mac.
+Hermes Desktop 1.2.0 is the local Hermes release.
 
-Choose `This Mac` when Hermes is installed locally and use the full Desktop
-workspace without configuring SSH to localhost. Sessions, Chat, Workflows,
-Files, Skills, Usage, Cron, Kanban, discovery, and Terminal all operate against
-your current macOS account's real Hermes data.
+If Hermes Agent runs on your Mac, you can now choose `This Mac` and use the
+whole Desktop workspace without setting up SSH to localhost. Sessions, Chat,
+Workflows, Files, Skills, Usage, Cron, Kanban, and Terminal work directly
+against your current macOS account's real Hermes installation.
 
-Remote workflows remain fully supported. Existing connections still decode as
-`SSH Host`, retain their exact workspace identities, and use the same SSH
-arguments, ControlMaster behavior, retries, errors, terminal environment, and
-profile scoping as before.
+The idea stays the same: Hermes Desktop does not create a second copy of your
+Hermes state. It now meets Hermes where it already runs, whether that is this
+Mac, a Raspberry Pi on your network, another Mac, a VPS, or a remote server.
 
-## Direct-Local Hermes
+## What Changed
 
-- Add a connection and choose `This Mac` or `SSH Host`.
-- Local connections need only a name; SSH host, user, alias, and port fields are
-  hidden because they are not used.
-- Named Hermes profiles and custom `HERMES_HOME` paths work in both modes.
-- The embedded terminal launches a real local shell with the current user's
-  environment and the same Hermes bootstrap used for SSH terminals.
-- Local mutations are clearly identified as changes to this Mac's real Hermes
-  files, sessions, scheduler, skills, and Kanban data.
-- Direct-local mode is distinct from an SSH connection targeting `localhost`,
-  so saved workflows, bookmarks, pins, and profile preferences do not collide.
+- Connections now have an explicit `This Mac` or `SSH Host` mode.
+- `This Mac` needs only a connection name. There is no SSH alias, hostname,
+  user, port, host-key setup, or passwordless SSH requirement.
+- Every main workspace surface supports local Hermes: Sessions and transcripts,
+  the real Hermes TUI in Chat, Workflows, Files, Skills, Usage, Cron Jobs,
+  Kanban, discovery, and Terminal.
+- The embedded Terminal opens a real local shell and uses the same Hermes
+  profile, custom home, PATH preparation, and launch rules as the rest of the
+  app.
+- Named profiles and custom `HERMES_HOME` paths work in both local and SSH
+  mode.
+- Actions that edit files, skills, scheduler state, sessions, or Kanban make it
+  clear when they are changing this Mac's real Hermes data.
 
-## Compatibility And Safety
+## Existing SSH Connections
 
-- Existing saved connection profiles without a connection type continue to load
-  as SSH connections.
-- SSH fingerprints and workspace scope remain unchanged for existing users.
-- Invalid future or malformed connection entries no longer prevent valid saved
-  connections from loading.
-- English, Simplified Chinese, and Russian UI copy now describes local and SSH
+Nothing about the remote workflow is being replaced. Existing saved
+connections continue to load as `SSH Host`, keep the same workspace identities,
+and retain the established SSH arguments, multiplexing behavior, retry path,
+terminal environment, and profile scoping.
+
+Direct-local mode is also intentionally separate from an SSH connection aimed
+at `localhost`, so workflows, bookmarks, pinned sessions, and preferences do
+not collide between the two.
+
+## Also Included
+
+- Saved connection loading is more resilient: malformed or future connection
+  entries no longer prevent valid profiles from loading.
+- LAN SSH failures now point to the macOS Local Network permission when that is
+  the likely blocker.
+- English, Simplified Chinese, and Russian copy now describes local and SSH
   operation accurately.
-
-## Additional Hardening
-
-- LAN SSH failures now point users to the macOS Local Network permission when
-  appropriate.
-- Release packaging refuses dirty working trees.
-- Release verification checks that the shipped bundle contains the Local
-  Network usage description required for LAN SSH hosts.
 
 ## Requirements
 

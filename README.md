@@ -69,7 +69,7 @@ host they already use, without adding another layer to trust.
 - works with multiple Hermes profiles for a multi-agent workflow
 - reads the real sessions, Kanban, cron jobs, skills, files, and usage
 - saves reusable workflow presets locally on your Mac, then launches them
-  against the selected host/profile in a fresh Terminal tab
+  against the selected connection/profile in a fresh Terminal tab
 - includes an embedded local or SSH terminal for the moments where the shell is still
   the right tool
 - ships as a universal macOS app for Apple Silicon and Intel Macs
@@ -87,9 +87,9 @@ in place with conflict checks before save.
 
 That restraint has a practical advantage: Hermes Desktop can remain useful when
 higher-level surfaces are unavailable. If a dashboard, gateway, or agent
-configuration breaks, the app still has the direct SSH path: inspect the host,
-edit the relevant files, open a terminal, and repair the system from the place
-where the state actually lives.
+configuration breaks, the app still has the direct machine path: inspect the
+real Hermes state, edit the relevant files, open a terminal, and repair the
+system from the place where the state actually lives.
 
 ### Desktop and web dashboard
 
@@ -125,8 +125,9 @@ For the native Kanban workspace, the host needs a Hermes Agent build with
 upstream Kanban support. Newer Kanban features appear automatically when the
 host exposes them.
 
-Simple rule: if this works in Terminal from this Mac without asking for a
-password or host key confirmation, the app is usually ready too:
+For an SSH connection, the simple rule is: if this works in Terminal from this
+Mac without asking for a password or host key confirmation, the app is usually
+ready too:
 
 ```bash
 ssh your-host
@@ -432,7 +433,7 @@ The important detail is that Chat is a hosted `hermes --tui` surface, not a
 separate Desktop conversation backend. Sessions still reads persisted
 transcripts from the active Hermes store, which remains the source of truth.
 
-### Does Hermes Desktop replace a remote file manager or IDE?
+### Does Hermes Desktop replace a file manager or IDE?
 
 No.
 
@@ -441,28 +442,29 @@ selected text files next to the canonical Hermes files. It is still a focused
 Hermes workspace, not a full file manager, SFTP client, or IDE. Text files up
 to 10 MB are editable.
 
-### What happens if a remote file changed after I opened it?
+### What happens if a file changed after I opened it?
 
 Hermes Desktop will not blindly overwrite it.
 
 Before saving an edited workspace file or skill, the app checks whether the
-remote file still matches the version you opened. If it changed, save is
-blocked and your local edits stay intact until you reload intentionally.
+file on the active Hermes machine still matches the version you opened. If it
+changed, save is blocked and your unsaved edits stay intact until you reload
+intentionally.
 
 ## Where Hermes Desktop goes next
 
 Most of the original roadmap is now shipped.
 
 Hermes Desktop has reached the shape it was aiming for: a calm, capable native
-macOS workspace for the real Hermes workflow, still anchored to SSH and the
-host as source of truth.
+macOS workspace for the real Hermes workflow, anchored to the machine where
+Hermes runs as the source of truth.
 
 From here, the work is not about adding novelty for its own sake. It is about:
 
 - polishing onboarding, diagnostics, Files ergonomics, terminal UX, and
-  multi-host details
+  multi-connection details
 - tracking upstream Hermes Agent changes so the app stays close to the real
-  host workflow
+  Hermes workflow
 - keeping the trust story and release documentation aligned with the code and
   actual distribution model
 
